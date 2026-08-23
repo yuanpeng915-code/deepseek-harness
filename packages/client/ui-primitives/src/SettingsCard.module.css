@@ -1,0 +1,24 @@
+/* Plugin-configuration card chrome shared across the Settings → Plugins tabs.
+   Consuming features add their own content layout (padding, internal gaps,
+   header/body structure) through a className on the card. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.card {
+  min-width: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+.cardOpen {
+  border-color: var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-layer-2);
+}

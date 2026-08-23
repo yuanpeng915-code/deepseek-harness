@@ -100,6 +100,10 @@
     - id: plugin-inventory
       name: '@deepseek-ai/dsh-host-plugin-inventory'
 
+    # Read-only workspace directory tree for the file-tree browser.
+    - id: file-tree
+      name: '@deepseek-ai/dsh-host-file-tree'
+
     # The API gateway: the transport-agnostic dispatch face every client shape
     # shares. The base layer's agent-default-model service owns the default model.
     - id: api-gateway
@@ -193,6 +197,12 @@
 
     - id: ui-sidebar
       name: '@deepseek-ai/dsh-client-ui-sidebar'
+
+    - id: ui-model-board
+      name: '@deepseek-ai/dsh-client-ui-model-board'
+
+    - id: ui-file-tree
+      name: '@deepseek-ai/dsh-client-ui-file-tree'
 
     - id: ui-settings
       name: '@deepseek-ai/dsh-client-ui-settings'

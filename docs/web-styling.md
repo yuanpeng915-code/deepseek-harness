@@ -20,6 +20,14 @@ Global style sheets belong in `ui-theme/src/styles/`. Component styles live besi
 - Put presentation in CSS. Inline React styles may pass component-local custom-property values but must not encode theme branches.
 - Preserve keyboard focus visibility and reduced-motion behavior when adding transitions or hover-only controls.
 
+## Plugin configuration cards
+
+Settings → Plugins tabs present one plugin per card in a constrained column. Feature packages compose the card chrome from the shared [`SettingsCard` and `SettingsCardSection`](../packages/client/ui-primitives/src/SettingsCard.tsx) primitives instead of redefining it.
+
+Wrap the card column in `SettingsCardSection`; it owns the 760px width cap and column rhythm. Render each card with `SettingsCard` (`as="li"` inside a list, or `div`); the primitive owns `border: 1px solid var(--dsw-alias-border-l2)`, `border-radius: 10px`, `background: var(--dsw-alias-bg-layer-3)`, and the `open` highlight (`border-l1` + `bg-layer-2`).
+
+Keep the card's content layout — padding, internal gaps, header and body structure — in the feature's own CSS module through the card's `className`; the primitive does not impose it. Show status through the [`StateDot`](../packages/client/ui-primitives/src/StateDot.tsx) primitive or a `data-*` state attribute, and short classifications through [`Pill`](../packages/client/ui-primitives/src/Pill.tsx). Use only `--dsw-alias-*` tokens; preserve keyboard focus visibility and reduced-motion behavior.
+
 ## Changing the system
 
 Add or change a shared token in the owning `ui-theme` sheet, then consume its semantic alias from feature packages. Update the owning package reference when a public styling contract changes. Visual behavior follows the [testing policy](testing.md); the [styling-system Agent Note](../.agents/notes/implemented/process/2026-07-19-web-styling-system.md) records framework rationale.

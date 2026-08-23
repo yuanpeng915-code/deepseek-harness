@@ -196,13 +196,13 @@ export function SidebarRoot({
         })}
       </div>
 
-      {/* Footer actions stack above Settings in both sidebar widths. */}
+      {/* Settings sit first; additive actions align to their right. */}
       <div className={css.footArea}>
-        <div className={css.footerActions}>
-          {renderSlot('sidebar.footer.action', { wide })}
-        </div>
         <div className={css.settingsArea}>
           {renderSlot('sidebar.settings', { wide })}
+        </div>
+        <div className={css.footerActions}>
+          {renderSlot('sidebar.footer.action', { wide })}
         </div>
       </div>
     </div>

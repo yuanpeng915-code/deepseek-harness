@@ -3,7 +3,7 @@
 import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type { InputTriggerService, InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type {} from './events.ts'
@@ -39,6 +39,7 @@ export const inject = [
 /** Mount every Cordis browser surface over the shared Host inventory. */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-cordis: dictionaries')
+  const t = ctx.locale.bind(NS)
 
   const port: CordisDynamicPort = {
     stop: async (sessionId, pluginId) => {
@@ -81,9 +82,11 @@ export function apply(ctx: ClientContext): void {
     inventory.refresh()
   })
 
-  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
-    name: 'sidebar.footer.action',
-    id: 'cordis-panel',
+  ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
+    name: 'settings.plugins.tab',
+    id: 'dynamic',
+    order: 20,
+    label: () => t('panel.tab'),
     locale: NS,
     inject: (): CordisPanelFace => ({
       hooks: {

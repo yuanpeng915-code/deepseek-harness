@@ -38,8 +38,8 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-/* Section header: title, an inline search control, and the two trailing
-   actions. Expanding search collapses the action cluster and takes its room. */
+/* Section header: title, an inline search control, and the trailing action
+   cluster. Expanding search collapses the cluster and takes its room. */
 .sectionHeader {
   flex: none;
   display: flex;
@@ -110,7 +110,11 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  max-width: 60px;
+  /* Three 28px icon actions + two 4px gaps: view options, add workspace, and
+     one `sidebar.workspaces.action` slot entry (the file-tree toggle). The
+     cap only gates the collapse animation; the cluster is `flex: none` and
+     takes its natural content width below this. */
+  max-width: 92px;
   opacity: 1;
   overflow: hidden;
   visibility: visible;

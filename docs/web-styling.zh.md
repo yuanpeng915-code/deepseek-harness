@@ -20,6 +20,14 @@
 - 呈现规则写在 CSS 中。React 内联样式可以传递组件局部自定义属性值，但不得编码主题分支。
 - 添加过渡动画或仅悬停可见的控件时，保留清晰可见的键盘焦点和减少动态效果行为。
 
+## 插件配置卡片
+
+设置 → 插件 各 tab 在受限宽度的列中按「每个插件一张卡片」呈现。功能包通过共享原语 [`SettingsCard` 与 `SettingsCardSection`](../packages/client/ui-primitives/src/SettingsCard.tsx) 组合卡片外观，而不是各自重复定义。
+
+用 `SettingsCardSection` 包裹卡片列；它负责 760px 的宽度上限和列的垂直节奏。用 `SettingsCard` 渲染每张卡片（在列表中传 `as="li"`，或 `div`）；原语负责 `border: 1px solid var(--dsw-alias-border-l2)`、`border-radius: 10px`、`background: var(--dsw-alias-bg-layer-3)`，以及 `open` 高亮（`border-l1` + `bg-layer-2`）。
+
+卡片的内容布局——内边距、内部间距、头部与主体结构——留在功能包自己的 CSS 模块中，通过卡片的 `className` 传入；原语不强加内容布局。状态用 [`StateDot`](../packages/client/ui-primitives/src/StateDot.tsx) 原语或 `data-*` 状态属性表示，简短分类用 [`Pill`](../packages/client/ui-primitives/src/Pill.tsx)。只使用 `--dsw-alias-*` token；保留键盘焦点可见性与减少动态效果行为。
+
 ## 变更系统
 
 在所属 `ui-theme` 样式表中添加或修改共享 token，然后在功能包中使用其语义别名。公共样式约定发生变化时，更新所属包的参考文档。视觉行为遵循[测试策略](testing.zh.md)；[样式系统 Agent Note](../.agents/notes/implemented/process/2026-07-19-web-styling-system.zh.md) 记录框架依据。

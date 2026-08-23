@@ -1100,6 +1100,7 @@ export function WorkspaceBrowser({
               </button>
             </Tooltip>
           )}
+          {renderSlot('sidebar.workspaces.action', { wide })}
         </div>
         {/* Add flow + its error dialog (same package — direct composition). */}
         <WorkspacePickFlow
