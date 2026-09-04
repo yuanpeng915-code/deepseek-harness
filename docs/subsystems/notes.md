@@ -32,7 +32,7 @@ interface NoteItem {
   readonly text: string
   /** Presentation color; model-invisible. */
   readonly color: NoteColor
-  /** Whether the note is pinned in the panel and import ordering. */
+  /** Whether the note carries the `[pinned]` marker in model-facing bullet bodies; ordering ignores it. */
   readonly pinned: boolean
   /** Epoch milliseconds of creation; set once and never rewritten. */
   readonly createdAt: number
@@ -44,7 +44,7 @@ interface NoteItem {
 ```ts type-equiv
 /**
  * The `notes` projection value: the session's current notes plus the
- * recorded model-context injection switch. Per-item rule: every `note/put`
+ * recorded task-execution switch. Per-item rule: every `note/put`
  * upserts one note in place, `note/delete` removes one, and `note/inject`
  * flips the switch, so the fold is deterministic order-wise without a
  * whole-value rewrite.
@@ -52,7 +52,11 @@ interface NoteItem {
 interface NotesState {
   /** Current notes in event order (insertion position; display ordering is a view concern). */
   readonly notes: readonly NoteItem[]
-  /** Whether the `notes:context` system-prompt section is enabled. */
+  /**
+   * Whether automatic note-task execution is enabled: after each settled
+   * turn the oldest note is delivered as a user message and removed, until
+   * the queue empties and the switch records itself off.
+   */
   readonly inject: boolean
 }
 ```
@@ -91,7 +95,7 @@ interface NoteImportResult {
 
 ## Service behavior
 
-[`NoteService`](../../packages/notes/notes/src/index.ts) (`ctx.notes`) folds state on demand from the session log — note events are few relative to a log, and every mutation already pays a durable append. `put` creates or replaces one note (an unknown id appends, a known id replaces in place), enforces the configured `maxNoteBytes` / `maxNotes` bounds, and clamps `updatedAt` against backward wall-clock movement; `delete` rejects an unknown id instead of no-oping; `setInject` records the switch and skips the event when the recorded state already matches. `importAsMessage` composes the selected notes (pinned first) into one user-message steer. Every failure is a `NoteError` with a stable `notes-*` code; nothing is silently skipped. The `notes` projection unit serves clients the whole `NotesState`, and the `notes:context` section (order 60) renders the folded notes only while the recorded switch is on — an off switch leaves the section empty, so injection state is reconstructable from the log alone.
+[`NoteService`](../../packages/notes/notes/src/index.ts) (`ctx.notes`) folds state on demand from the session log — note events are few relative to a log, and every mutation already pays a durable append. `put` creates or replaces one note (an unknown id appends, a known id replaces in place), enforces the configured `maxNoteBytes` / `maxNotes` bounds, and clamps `updatedAt` against backward wall-clock movement; `delete` rejects an unknown id instead of no-oping; `setInject` records the switch, refuses to enable an empty queue, and executes the first note immediately when the loop is idle; it skips the event when the recorded state already matches. `importAsMessage` composes the selected notes (oldest created first) into one user-message steer. While the switch is on, the service runs the queue: after each settled turn the oldest note is steered in as one user message and removed, and an emptied queue records the switch off. Every failure is a `NoteError` with a stable `notes-*` code; nothing is silently skipped. The `notes` projection unit serves clients the whole `NotesState`, and the `notes:context` section (order 60) renders the folded notes only while the recorded switch is on — an off switch leaves the section empty, so injection state is reconstructable from the log alone.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -118,7 +122,8 @@ Notes service (`ctx.notes`) backed exclusively by the owning session log. State 
 @Remote('put') put(agent: Agent, request: NotePutRequest): NoteItem
 
 /**
- * Delete one note by id.
+ * Delete one note by id. Removing the last note while execution is on
+ * records the switch off, so the queue can never rest enabled and empty.
  * @param agent - owning live agent.
  * @param id - the note to remove.
  * @throws {@link NoteError} when the id is unknown — never a silent no-op.
@@ -126,17 +131,21 @@ Notes service (`ctx.notes`) backed exclusively by the owning session log. State 
 @Remote('delete') delete(agent: Agent, id: NoteId): void
 
 /**
- * Enable or disable the `notes:context` prompt section for this session.
- * The recorded state already matching is a no-op without a log event.
+ * Enable or disable automatic note-task execution. Enabling an empty queue
+ * is refused — there is no task to run. Enabling while the loop is idle
+ * executes the first note immediately; enabling mid-turn hands the queue to
+ * the settle listener. The recorded state already matching is a no-op
+ * without a log event.
  * @param agent - owning live agent.
- * @param enabled - whether folded notes join each model request.
+ * @param enabled - whether settled turns drain the note queue.
+ * @throws {@link NoteError} when enabling with no notes recorded.
  */
 @Remote('setInject') setInject(agent: Agent, enabled: boolean): void
 
 /**
  * Import notes into the conversation as one user message: the selected
  * notes (all of them when `ids` is omitted) compose into a single
- * pinned-first steer that the model sees on its next turn.
+ * oldest-first steer that the model sees on its next turn.
  * @param agent - owning live agent.
  * @param request - optional exact ids; every named id must exist.
  * @returns how many notes the composed message carried.

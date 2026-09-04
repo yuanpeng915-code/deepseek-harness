@@ -193,14 +193,92 @@ describe('NoteService delete and setInject', () => {
     }
   })
 
-  it('appends note/inject once per flip and no-ops on the recorded state', async () => {
+  it('appends note/inject once per flip, executes on enable while idle, and no-ops on the recorded state', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
     const bench = await harness()
+    bench.ctx.notes.put(bench.agent, { text: 'task one' })
+    vi.setSystemTime(1_700_000_001_000)
+    bench.ctx.notes.put(bench.agent, { text: 'task two' })
     bench.ctx.notes.setInject(bench.agent, true)
     bench.ctx.notes.setInject(bench.agent, true)
     expect(bench.state().inject).toBe(true)
     expect(bench.session.events.filter(event => event.type === 'note/inject')).toHaveLength(1)
     bench.ctx.notes.setInject(bench.agent, false)
     expect(bench.state().inject).toBe(false)
+  })
+
+  it('refuses to enable with an empty queue and appends nothing', async () => {
+    const bench = await harness()
+    try {
+      bench.ctx.notes.setInject(bench.agent, true)
+      expect.unreachable('enabling an empty queue must throw')
+    } catch (error) {
+      expect((error as HarnessError).code).toBe('notes-nothing-to-import')
+    }
+    expect(bench.session.events.filter(event => event.type === 'note/inject')).toHaveLength(0)
+  })
+})
+
+describe('NoteService task execution', () => {
+  it('steers the oldest note on enable while idle and keeps the switch on while notes remain', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const bench = await harness()
+    bench.ctx.notes.put(bench.agent, { text: 'task one' })
+    vi.setSystemTime(1_700_000_001_000)
+    const second = bench.ctx.notes.put(bench.agent, { text: 'task two', pinned: true })
+    bench.ctx.notes.setInject(bench.agent, true)
+    expect(bench.steered).toHaveLength(1)
+    const block = bench.steered[0]!.content[0] as { type: string; text: string }
+    expect(block.text).toBe('task one')
+    expect(bench.state().notes.map(note => note.id)).toEqual([second.id])
+    expect(bench.state().inject).toBe(true)
+  })
+
+  it('runs one note per settle until the queue drains, then records the switch off', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const bench = await harness()
+    bench.ctx.notes.put(bench.agent, { text: 'task one' })
+    vi.setSystemTime(1_700_000_001_000)
+    bench.ctx.notes.put(bench.agent, { text: 'task two' })
+    bench.ctx.notes.setInject(bench.agent, true)
+    expect(bench.steered).toHaveLength(1)
+    bench.ctx.emit('agent/status', { agent: bench.agent, status: 'idle' })
+    expect(bench.steered).toHaveLength(2)
+    expect(bench.state()).toMatchObject({ inject: false })
+    expect(bench.state().notes).toHaveLength(0)
+    bench.ctx.emit('agent/status', { agent: bench.agent, status: 'idle' })
+    expect(bench.steered).toHaveLength(2)
+  })
+
+  it('records the switch off when the last note is deleted while execution is on', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const bench = await harness()
+    bench.ctx.notes.put(bench.agent, { text: 'task one' })
+    vi.setSystemTime(1_700_000_001_000)
+    bench.ctx.notes.put(bench.agent, { text: 'task two' })
+    bench.ctx.notes.setInject(bench.agent, true)
+    const remaining = bench.state().notes[0]!.id
+    bench.ctx.notes.delete(bench.agent, remaining)
+    expect(bench.state()).toMatchObject({ inject: false })
+    expect(bench.state().notes).toHaveLength(0)
+  })
+
+  it('ignores settle events naming an agent that is not live', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const bench = await harness()
+    bench.ctx.notes.put(bench.agent, { text: 'task one' })
+    vi.setSystemTime(1_700_000_001_000)
+    bench.ctx.notes.put(bench.agent, { text: 'task two' })
+    bench.ctx.notes.setInject(bench.agent, true)
+    const stranger = stubAgent(`notes-test-stranger-${Math.random()}`)
+    bench.ctx.emit('agent/status', { agent: stranger.agent, status: 'idle' })
+    expect(stranger.steered).toHaveLength(0)
+    expect(bench.state().notes).toHaveLength(1)
   })
 })
 
@@ -215,9 +293,12 @@ describe('NoteService importAsMessage', () => {
     }
   })
 
-  it('steers one user message composing all notes pinned first', async () => {
+  it('steers one user message composing all notes oldest first', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
     const bench = await harness()
     bench.ctx.notes.put(bench.agent, { text: 'later idea' })
+    vi.setSystemTime(1_700_000_001_000)
     bench.ctx.notes.put(bench.agent, { text: 'urgent idea', pinned: true })
     const result = bench.ctx.notes.importAsMessage(bench.agent, {})
     expect(result).toEqual({ count: 2 })
@@ -225,7 +306,7 @@ describe('NoteService importAsMessage', () => {
     const block = bench.steered[0]!.content[0] as { type: string; text: string }
     expect(block.type).toBe('text')
     expect(block.text).toBe(
-      'Here are my sticky notes to bring into this conversation:\n\n- [pinned] urgent idea\n- later idea',
+      'Here are my sticky notes to bring into this conversation:\n\n- later idea\n- [pinned] urgent idea',
     )
   })
 

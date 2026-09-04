@@ -13,8 +13,8 @@ Status: implemented
 会话便签以一个 host 插件加一个浏览器插件交付，仅挂载在 `web-app` bundle：
 
 - `@deepseek-ai/dsh-notes`（`ctx.notes`，[packages/notes/notes](../../../../packages/notes/notes)）拥有状态。每次变更都是一条独立的 log-only `SessionEventMap` 事件——`note/put`（携带颜色与置顶的 upsert）、`note/delete`、`note/inject`——因此持久状态完全存于所属会话日志并可从中重放。服务按需把事件折叠为 `notes` 投影单元，并将四个 Remote 动词（`put`、`delete`、`setInject`、`import`）暴露为每会话 Typert 服务。失败是携带稳定 `notes-*` 代码的显式 `NoteError`；没有任何静默跳过。
-- 模型只通过两条用户发起的路径遇见便签：`notes:context` 系统提示节（order 60），在记录的注入开关开启时渲染折叠后的便签；以及一次性 `import` 动词，把选中的便签组合为一条 steer 的用户消息。颜色、id 与时间戳从不渲染进模型可见文本。
-- `@deepseek-ai/dsh-client-ui-notes`（[packages/client/ui-notes](../../../../packages/client/ui-notes)）提供 noty 风格面板：ui-conversation 新增 `conversation.session.body.utilities` 工具条（钉在头部分隔线与滚动区之间）上的一个条目，触发器与下拉面板成对出现，含增/改/删、六色 noty 调色板、置顶、注入开关与导入按钮。面板直接读投影并调用四个动词。
+- 模型只通过两条用户发起的路径遇见便签：`notes:context` 系统提示节（order 60），在记录的注入开关开启时渲染折叠后的便签；以及一次性 `import` 动词，把选中的便签组合为一条 steer 的用户消息。开关同时驱动执行循环：每个 settled 回合结束后，服务把创建最早的便签作为一条用户消息 steer 进入对话并删除，直到队列清空、开关自动记录为关闭。颜色、id 与时间戳从不渲染进模型可见文本。
+- `@deepseek-ai/dsh-client-ui-notes`（[packages/client/ui-notes](../../../../packages/client/ui-notes)）提供 noty 风格面板：ui-conversation 新增 `conversation.session.body.utilities` 工具条（钉在头部分隔线与滚动区之间）上的一个条目，触发器与下拉面板成对出现，含增/改/删、六色 noty 调色板、置顶、执行便签任务开关（无便签时禁用）与导入按钮。面板直接读投影并调用四个动词，并按创建时间正序排列 —— 即执行循环遵循的从上到下队列顺序。
 
 ## Alternatives considered
 

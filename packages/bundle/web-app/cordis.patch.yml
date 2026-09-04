@@ -67,7 +67,8 @@
         maxNoteBytes: 8192
 
     # Per-session sticky notes: the durable note/put|delete|inject stream, the
-    # notes projection, and the notes:context prompt section. The writes come
+    # notes projection, the notes:context prompt section, and the execute-tasks
+    # loop that steers the oldest note after each settled turn. The writes come
     # from the browser panel only, so the row lives in this web bundle.
     - id: notes
       name: '@deepseek-ai/dsh-notes'

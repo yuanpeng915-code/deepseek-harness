@@ -32,7 +32,7 @@ interface NoteItem {
   readonly text: string
   /** Presentation color; model-invisible. */
   readonly color: NoteColor
-  /** Whether the note is pinned in the panel and import ordering. */
+  /** Whether the note carries the `[pinned]` marker in model-facing bullet bodies; ordering ignores it. */
   readonly pinned: boolean
   /** Epoch milliseconds of creation; set once and never rewritten. */
   readonly createdAt: number
@@ -44,7 +44,7 @@ interface NoteItem {
 ```ts type-equiv
 /**
  * The `notes` projection value: the session's current notes plus the
- * recorded model-context injection switch. Per-item rule: every `note/put`
+ * recorded task-execution switch. Per-item rule: every `note/put`
  * upserts one note in place, `note/delete` removes one, and `note/inject`
  * flips the switch, so the fold is deterministic order-wise without a
  * whole-value rewrite.
@@ -52,7 +52,11 @@ interface NoteItem {
 interface NotesState {
   /** Current notes in event order (insertion position; display ordering is a view concern). */
   readonly notes: readonly NoteItem[]
-  /** Whether the `notes:context` system-prompt section is enabled. */
+  /**
+   * Whether automatic note-task execution is enabled: after each settled
+   * turn the oldest note is delivered as a user message and removed, until
+   * the queue empties and the switch records itself off.
+   */
   readonly inject: boolean
 }
 ```
@@ -91,7 +95,7 @@ interface NoteImportResult {
 
 ## 服务行为
 
-[`NoteService`](../../packages/notes/notes/src/index.ts)（`ctx.notes`）按需从会话日志折叠状态 —— 便签事件相对日志数量很少，且每次变更本就要支付一次持久追加。`put` 创建或按 id 替换一条便签（未知 id 追加，已知 id 原位替换），执行配置的 `maxNoteBytes` / `maxNotes` 上限，并将 `updatedAt` 对抗时钟回拨做钳制；`delete` 对未知 id 显式拒绝而非空操作；`setInject` 记录开关，记录状态已一致时跳过事件。`importAsMessage` 将选中的便签（置顶优先）组合为一条用户消息 steer。所有失败都是携带稳定 `notes-*` 代码的 `NoteError`；没有任何静默跳过。`notes` 投影单元向客户端提供整个 `NotesState`；`notes:context` 节（order 60）仅在记录的开关开启时渲染折叠便签 —— 关闭时节为空，因此注入状态仅凭日志即可重建。
+[`NoteService`](../../packages/notes/notes/src/index.ts)（`ctx.notes`）按需从会话日志折叠状态 —— 便签事件相对日志数量很少，且每次变更本就要支付一次持久追加。`put` 创建或按 id 替换一条便签（未知 id 追加，已知 id 原位替换），执行配置的 `maxNoteBytes` / `maxNotes` 上限，并将 `updatedAt` 对抗时钟回拨做钳制；`delete` 对未知 id 显式拒绝而非空操作；`setInject` 记录开关，拒绝在空队列上启用，且循环空闲时启用会立即执行第一条便签；记录状态已一致时跳过事件。`importAsMessage` 将选中的便签（创建早者在前）组合为一条用户消息 steer。开关开启时由服务自己跑队列：每个 settled 回合结束后，创建最早的一条便签作为一条用户消息被 steer 进入对话并被删除；队列清空后开关自动记录为关闭。所有失败都是携带稳定 `notes-*` 代码的 `NoteError`；没有任何静默跳过。`notes` 投影单元向客户端提供整个 `NotesState`；`notes:context` 节（order 60）仅在记录的开关开启时渲染折叠便签 —— 关闭时节为空，因此注入状态仅凭日志即可重建。
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -118,7 +122,8 @@ Notes service (`ctx.notes`) backed exclusively by the owning session log. State 
 @Remote('put') put(agent: Agent, request: NotePutRequest): NoteItem
 
 /**
- * Delete one note by id.
+ * Delete one note by id. Removing the last note while execution is on
+ * records the switch off, so the queue can never rest enabled and empty.
  * @param agent - owning live agent.
  * @param id - the note to remove.
  * @throws {@link NoteError} when the id is unknown — never a silent no-op.
@@ -126,17 +131,21 @@ Notes service (`ctx.notes`) backed exclusively by the owning session log. State 
 @Remote('delete') delete(agent: Agent, id: NoteId): void
 
 /**
- * Enable or disable the `notes:context` prompt section for this session.
- * The recorded state already matching is a no-op without a log event.
+ * Enable or disable automatic note-task execution. Enabling an empty queue
+ * is refused — there is no task to run. Enabling while the loop is idle
+ * executes the first note immediately; enabling mid-turn hands the queue to
+ * the settle listener. The recorded state already matching is a no-op
+ * without a log event.
  * @param agent - owning live agent.
- * @param enabled - whether folded notes join each model request.
+ * @param enabled - whether settled turns drain the note queue.
+ * @throws {@link NoteError} when enabling with no notes recorded.
  */
 @Remote('setInject') setInject(agent: Agent, enabled: boolean): void
 
 /**
  * Import notes into the conversation as one user message: the selected
  * notes (all of them when `ids` is omitted) compose into a single
- * pinned-first steer that the model sees on its next turn.
+ * oldest-first steer that the model sees on its next turn.
  * @param agent - owning live agent.
  * @param request - optional exact ids; every named id must exist.
  * @returns how many notes the composed message carried.

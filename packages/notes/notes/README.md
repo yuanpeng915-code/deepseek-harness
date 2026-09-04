@@ -18,7 +18,7 @@ Session-scoped sticky notes: a user-owned per-conversation scratchpad whose dura
 
 ## Service contract
 
-`ctx.notes` accepts only the exact live `Agent` instance registered under its id. `put` creates a note (service-assigned id, default color `yellow`, unpinned) or replaces one by id, keeping the recorded color and pin state where the request omits them and clamping `updatedAt` against backward wall-clock movement. `delete` rejects an unknown id instead of no-oping. `setInject` records the injection switch and skips the event when the recorded state already matches. `importAsMessage` composes the selected notes — all of them when the request omits `ids`, pinned first — into one user-message steer the model sees on its next turn, and rejects an unknown id or an empty selection. Every failure is a `NoteError` with a stable `notes-*` code; nothing is silently skipped. The callable API is the generated region of [notes.md](../../../docs/subsystems/notes.md#cordis-surface).
+`ctx.notes` accepts only the exact live `Agent` instance registered under its id. `put` creates a note (service-assigned id, default color `yellow`, unpinned) or replaces one by id, keeping the recorded color and pin state where the request omits them and clamping `updatedAt` against backward wall-clock movement. `delete` rejects an unknown id instead of no-oping. `setInject` records the task-execution switch, refuses to enable an empty queue, and — enabling while the loop is idle — executes the first note immediately; it skips the event when the recorded state already matches. `importAsMessage` composes the selected notes — all of them when the request omits `ids`, oldest created first — into one user-message steer the model sees on its next turn, and rejects an unknown id or an empty selection. Every failure is a `NoteError` with a stable `notes-*` code; nothing is silently skipped. The callable API is the generated region of [notes.md](../../../docs/subsystems/notes.md#cordis-surface).
 
 The service contributes the `notes` projection unit (whole-`NotesState` value) and the `notes:context` system-prompt section (order 60), whose text is the folded notes only while the recorded switch is on; an off switch leaves the section empty. Both children activate only when the corresponding registry is composed, so headless assemblies stay unaffected.
 
@@ -30,16 +30,16 @@ Consumer plugins call the service verbs and read the `notes` projection; the web
 
 ## Model Experience
 
-### Context injection (`notes:context` section)
+### Task execution and the `notes:context` section
 
 #### What the model sees
 
-While the session's recorded switch is on, each model request carries a system-prompt section whose text renders the folded notes: a heading followed by one bullet per note, pinned first and oldest created first, each line prefixed `[pinned] ` when the note is pinned. Colors, ids, and timestamps are absent from the rendered text. With the switch off — or with no notes — the section contributes no text.
+With the switch on the service runs the queue itself: after each settled turn the oldest note is steered in as one user message and removed, and when the queue empties the switch records itself off. Enabling executes the first note immediately while the loop is idle; enabling an empty queue is refused, and deleting the last note while on records the switch off. Each model request additionally carries a system-prompt section whose text renders the remaining notes: a heading followed by one bullet per note, oldest created first, each line prefixed `[pinned] ` when the note is pinned. Colors, ids, and timestamps are absent from the rendered text. With the switch off — or with no notes — the section contributes no text.
 
 ##### Verbatim text for this field, when needed
 
 ```markdown
-The user's sticky notes for this conversation (pinned first):
+The user's sticky notes for this conversation (oldest first):
 
 - <[pinned] >note text
 ```
@@ -78,4 +78,4 @@ Append-only: the message extends the history tail; later note edits do not rewri
 
 - **No model tools** — the agent cannot read or write notes itself; both import paths are user-initiated. A model-facing tool surface would need a tool catalog entry, a boot manifest, and snapshot coverage.
 - **No compare-and-set** — `put` replaces unconditionally, so two concurrent editors of one note last-writer-wins; cross-client conflict detection is deferred.
-- **Prefix-cache invalidation while injecting** — with the switch on, every note mutation rewrites the `notes:context` section text and invalidates provider prefix-cache reuse from the section onward.
+- **Prefix-cache invalidation while executing** — with the switch on, every note mutation rewrites the `notes:context` section text and invalidates provider prefix-cache reuse from the section onward.

@@ -1,7 +1,7 @@
 /**
  * NotesPanel: the sticky-notes dropdown panel hanging under its body-strip
- * trigger — a note-style card list with add, inline edit, pin, delete,
- * per-note color, the context-injection switch, and one-shot import as a user
+ * trigger — a note-style task list with add, inline edit, pin, delete,
+ * per-note color, the execute-tasks switch, and one-shot import as a user
  * message. Closed panels render null; the projection drives the list and the
  * panel store drives editor state.
  */
@@ -20,14 +20,12 @@ import css from './NotesPanel.module.css'
 /** Full props of the dropdown panel: runtime seat + shared store + verbs + locale. */
 export type NotesPanelProps = PropsRuntime<'conversation.session.body.utilities'> & PropsStore<NotesStore> & InjectFace<NotesPanelActions> & PropsLocale<'notes'>
 
-/** Panel list order: pinned first, then most recently edited, id as the tiebreak. */
+/** Panel list order: oldest created first — the top-to-bottom task queue — id as the tiebreak. */
 function panelOrder(notes: readonly NoteItem[]): readonly NoteItem[] {
   return [...notes].sort((left, right) =>
-    left.pinned === right.pinned
-      ? left.updatedAt !== right.updatedAt
-        ? right.updatedAt - left.updatedAt
-        : left.id < right.id ? -1 : 1
-      : left.pinned ? -1 : 1)
+    left.createdAt !== right.createdAt
+      ? left.createdAt - right.createdAt
+      : left.id < right.id ? -1 : 1)
 }
 
 /** The dropdown panel under its trigger (closed panels render null). */
@@ -37,7 +35,7 @@ export function NotesPanel({ useProjection, useStore, actions, put, remove, setI
   const notes = projection?.notes ?? []
   const ordered = useMemo(() => panelOrder(notes), [notes])
   if (!state.open) return null
-  const injectEnabled = projection?.inject ?? false
+  const executeEnabled = projection?.inject ?? false
   const composing = state.editingId === 'new'
 
   /** Run one Remote verb promise, rendering its failure in the footer error line. */
@@ -74,14 +72,15 @@ export function NotesPanel({ useProjection, useStore, actions, put, remove, setI
     <div className={css.panel} data-notes-panel>
       <div className={css.header}>
         <span className={css.title}>{t('panel.title')}</span>
-        <label className={css.injectLabel}>
+        <label className={css.executeLabel}>
           <input
             type="checkbox"
-            className={css.injectToggle}
-            checked={injectEnabled}
-            onChange={() => { void run(setInject(!injectEnabled)) }}
+            className={css.executeToggle}
+            checked={executeEnabled}
+            disabled={notes.length === 0}
+            onChange={() => { void run(setInject(!executeEnabled)) }}
           />
-          {t('panel.inject')}
+          {t('panel.execute')}
         </label>
         <button
           type="button"

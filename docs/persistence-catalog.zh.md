@@ -522,8 +522,9 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 ```ts persistence-catalog
 /**
- * Whether the `notes:context` system-prompt section includes the folded
- * notes: log-only, non-surface, whole-value switch. The last
+ * Whether automatic note-task execution is on: after each settled turn
+ * the oldest note is delivered as one user message and removed, until
+ * the queue empties and the switch records itself off. The last
  * `note/inject` wins; a log with none folds to off.
  */
 'note/inject': { enabled: boolean }

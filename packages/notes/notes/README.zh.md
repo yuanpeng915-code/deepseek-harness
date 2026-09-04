@@ -18,7 +18,7 @@
 
 ## Service contract
 
-`ctx.notes` 只接受以其 id 注册的确切存活 `Agent` 实例。`put` 创建一条便签（服务分配 id，默认颜色 `yellow`，未置顶）或按 id 替换，请求缺省时保留已记录的颜色与置顶状态，并将 `updatedAt` 对抗时钟回拨做钳制。`delete` 对未知 id 显式拒绝而非空操作。`setInject` 记录注入开关，记录状态已一致时跳过事件。`importAsMessage` 将选中的便签 —— 请求缺省 `ids` 时为全部，置顶优先 —— 组合为一条用户消息 steer，模型在下一轮看到；未知 id 或空选择会被拒绝。所有失败都是携带稳定 `notes-*` 代码的 `NoteError`；没有任何静默跳过。可调用 API 是 [notes.md](../../../docs/subsystems/notes.zh.md#cordis-surface) 的生成区域。
+`ctx.notes` 只接受以其 id 注册的确切存活 `Agent` 实例。`put` 创建一条便签（服务分配 id，默认颜色 `yellow`，未置顶）或按 id 替换，请求缺省时保留已记录的颜色与置顶状态，并将 `updatedAt` 对抗时钟回拨做钳制。`delete` 对未知 id 显式拒绝而非空操作。`setInject` 记录任务执行开关，拒绝在空队列上启用，且在循环空闲时启用会立即执行第一条便签；记录状态已一致时跳过事件。`importAsMessage` 将选中的便签 —— 请求缺省 `ids` 时为全部，创建早者在前 —— 组合为一条用户消息 steer，模型在下一轮看到；未知 id 或空选择会被拒绝。所有失败都是携带稳定 `notes-*` 代码的 `NoteError`；没有任何静默跳过。可调用 API 是 [notes.md](../../../docs/subsystems/notes.zh.md#cordis-surface) 的生成区域。
 
 服务贡献 `notes` 投影单元（整个 `NotesState` 值）与 `notes:context` 系统提示节（order 60），后者仅在记录的开关开启时渲染折叠便签；关闭时节为空。两个子项仅在对应注册表被组合时激活，headless 组装不受影响。
 
@@ -30,16 +30,16 @@
 
 ## Model Experience
 
-### 上下文注入（`notes:context` 节）
+### 任务执行与 `notes:context` 节
 
 #### What the model sees
 
-会话记录的开关开启时，每次模型请求携带一个系统提示节，其文本渲染折叠后的便签：一行标题，随后每条便签一个 bullet，置顶优先、创建早者在前，置顶便签以 `[pinned] ` 前缀标记。颜色、id 与时间戳不出现在渲染文本中。开关关闭 —— 或没有便签 —— 时不贡献文本。
+开关开启时由服务自己跑队列：每个 settled 回合结束后，创建最早的一条便签作为一条用户消息被 steer 进入对话并被删除；队列清空后开关自动记录为关闭。循环空闲时启用会立即执行第一条便签；空队列启用被拒绝；开启状态下删除最后一条便签会把开关记录为关闭。每次模型请求另外携带一个系统提示节，其文本渲染剩余便签：一行标题，随后每条便签一个 bullet，创建早者在前，置顶便签以 `[pinned] ` 前缀标记。颜色、id 与时间戳不出现在渲染文本中。开关关闭 —— 或没有便签 —— 时不贡献文本。
 
 ##### Verbatim text for this field, when needed
 
 ```markdown
-The user's sticky notes for this conversation (pinned first):
+The user's sticky notes for this conversation (oldest first):
 
 - <[pinned] >note text
 ```

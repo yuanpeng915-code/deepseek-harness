@@ -1471,7 +1471,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/notes/notes/src/index.ts:77`](../packages/notes/notes/src/index.ts)
+Source: [`packages/notes/notes/src/index.ts:81`](../packages/notes/notes/src/index.ts)
 
 <a id="deepseek-aidsh-permission-presets"></a>
 

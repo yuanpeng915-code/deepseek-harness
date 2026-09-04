@@ -1091,18 +1091,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: '@Remote(\'delete\') delete(agent: Agent, id: NoteId): void',
-        description: 'Delete one note by id.',
+        description: 'Delete one note by id. Removing the last note while execution is on records the switch off, so the queue can never rest enabled and empty.',
         parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'id', description: 'the note to remove.' }],
         throws: ['{@link NoteError} when the id is unknown — never a silent no-op.'],
       },
       {
         signature: '@Remote(\'setInject\') setInject(agent: Agent, enabled: boolean): void',
-        description: 'Enable or disable the `notes:context` prompt section for this session. The recorded state already matching is a no-op without a log event.',
-        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'enabled', description: 'whether folded notes join each model request.' }],
+        description: 'Enable or disable automatic note-task execution. Enabling an empty queue is refused — there is no task to run. Enabling while the loop is idle executes the first note immediately; enabling mid-turn hands the queue to the settle listener. The recorded state already matching is a no-op without a log event.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'enabled', description: 'whether settled turns drain the note queue.' }],
+        throws: ['{@link NoteError} when enabling with no notes recorded.'],
       },
       {
         signature: '@Remote(\'import\') importAsMessage(agent: Agent, request: NoteImportRequest): NoteImportResult',
-        description: 'Import notes into the conversation as one user message: the selected notes (all of them when `ids` is omitted) compose into a single pinned-first steer that the model sees on its next turn.',
+        description: 'Import notes into the conversation as one user message: the selected notes (all of them when `ids` is omitted) compose into a single oldest-first steer that the model sees on its next turn.',
         parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'optional exact ids; every named id must exist.' }],
         returns: 'how many notes the composed message carried.',
         throws: ['{@link NoteError} on an unknown id or when there is nothing to import.'],

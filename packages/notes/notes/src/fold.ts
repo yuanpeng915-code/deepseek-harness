@@ -147,23 +147,22 @@ export function foldNotes(events: readonly { type: string; data: unknown }[], en
 
 /**
  * Display ordering shared by the panel and the model-facing renderers:
- * pinned first, then oldest created first, with the id as the stable tiebreak.
+ * oldest created first — the top-to-bottom queue order — with the id as the
+ * stable tiebreak. Pin state never reorders.
  * @param notes - notes in event order.
  * @returns the ordered copy.
  */
 export function orderNotesForDisplay(notes: readonly NoteItem[]): readonly NoteItem[] {
   return [...notes].sort((left, right) =>
-    left.pinned === right.pinned
-      ? left.createdAt !== right.createdAt
-        ? left.createdAt - right.createdAt
-        : left.id < right.id ? -1 : 1
-      : left.pinned ? -1 : 1,
+    left.createdAt !== right.createdAt
+      ? left.createdAt - right.createdAt
+      : left.id < right.id ? -1 : 1,
   )
 }
 
 /**
  * Render the notes body shared by the import message and the prompt section:
- * one bullet per note, pinned first, with a `[pinned]` marker.
+ * one bullet per note, oldest created first, with a `[pinned]` marker.
  * @param notes - notes in event order.
  * @returns the bullet body without any preamble, or `''` with no notes.
  */
@@ -176,19 +175,19 @@ function renderBullets(notes: readonly NoteItem[]): string {
 
 /**
  * Render the `notes:context` system-prompt section text. Empty whenever
- * injection is off or no notes exist, so the section only ever replaces the
+ * execution is off or no notes exist, so the section only ever replaces the
  * prompt prefix with user-recorded content.
  * @param state - the session's folded notes state.
  * @returns the section text or `''` when nothing applies.
  */
 export function renderNotesSection(state: NotesState): string {
   if (!state.inject || state.notes.length === 0) return ''
-  return `The user's sticky notes for this conversation (pinned first):\n\n${renderBullets(state.notes)}`
+  return `The user's sticky notes for this conversation (oldest first):\n\n${renderBullets(state.notes)}`
 }
 
 /**
  * Compose the one-shot import message body for "send notes into the
- * conversation": the same pinned-first bullets under an explicit preamble.
+ * conversation": the same oldest-first bullets under an explicit preamble.
  * @param notes - the selected notes in event order.
  * @returns the user-message text.
  */

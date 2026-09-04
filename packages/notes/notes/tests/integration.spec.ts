@@ -10,7 +10,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
@@ -25,6 +25,7 @@ let root: string | undefined
 const contexts: Context[] = []
 
 afterEach(async () => {
+  vi.useRealTimers()
   await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose()))
   if (root !== undefined) await rm(root, { recursive: true, force: true })
   root = undefined
@@ -110,21 +111,32 @@ describe('notes through a real Loader composition', () => {
     const { agent, steered } = stubAgentFor(session)
     ctx.agents.register(agent)
 
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const filler = ctx.notes.put(agent, { text: 'older filler' })
+    vi.setSystemTime(1_700_000_001_000)
     const created = ctx.notes.put(agent, { text: 'loader note', color: 'pink' })
+    vi.useRealTimers()
     expect(created.text).toBe('loader note')
     expect(session.events.some(event =>
       event.type === 'note/put'
       && event.data.note.id === created.id)).toBe(true)
 
     const snapshot = ctx.sessionProjections.snapshot(session)
-    expect(snapshot.values.notes).toEqual({ notes: [created], inject: false })
+    expect(snapshot.values.notes).toEqual({ notes: [filler, created], inject: false })
 
-    // Injection off: the section renders to no model-visible text.
+    // Execution off: the section renders to no model-visible text.
     const off = await ctx.systemPrompt.assemble({ agent })
     expect(off.sections.find(section => section.name === 'notes:context')?.text).toBe('')
     expect(renderPrompt(off)).not.toContain('sticky notes')
 
+    // Enabling execution drains the queue oldest-first: the filler note is
+    // steered as one task and removed, leaving 'loader note' in the section.
     ctx.notes.setInject(agent, true)
+    expect(steered).toHaveLength(1)
+    const block = steered[0]!.content[0] as { type: string; text: string }
+    expect(block.text).toBe('older filler')
+
     const on = await ctx.systemPrompt.assemble({ agent })
     expect(on.sections.find(section => section.name === 'notes:context')?.text)
       .toContain('- loader note')
@@ -132,7 +144,7 @@ describe('notes through a real Loader composition', () => {
 
     const imported = ctx.notes.importAsMessage(agent, {})
     expect(imported).toEqual({ count: 1 })
-    expect(steered).toHaveLength(1)
+    expect(steered).toHaveLength(2)
   })
 
   it('enforces the composed limits through the Loader config', async () => {

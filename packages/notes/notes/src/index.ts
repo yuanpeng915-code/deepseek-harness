@@ -2,11 +2,14 @@
  * Session-scoped sticky notes: a user-owned per-conversation scratchpad whose
  * durable state lives entirely in the session log. The service exposes the
  * panel's mutation verbs (put, delete, pin through put, color through put)
- * plus the injection switch, and contributes the optional `notes:context`
+ * plus the task-execution switch, and contributes the optional `notes:context`
  * system-prompt section that folds the recorded notes into each model request
- * while injection is on. Notes reach the model only through the two import
- * seams — the one-shot `import` steer and the injection section — so nothing
- * model-visible exists outside the recorded `note/*` events.
+ * while execution is on. When execution is on, the service runs the queue
+ * itself: after each settled turn the oldest note is steered in as one user
+ * message and removed, until the queue empties and the switch records itself
+ * off. Notes reach the model only through the two seams — the one-shot
+ * `import` steer and the section — so nothing model-visible exists outside
+ * the recorded `note/*` events.
  *
  * @module @deepseek-ai/dsh-notes
  */
@@ -24,7 +27,7 @@ import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-session-projection'
 // Type-only: resolves ctx.systemPrompt for the optional section child.
 import type {} from '@deepseek-ai/dsh-system-prompt'
-import { applyNoteEvent, composeImportText, foldNotes, renderNotesSection } from './fold.ts'
+import { applyNoteEvent, composeImportText, foldNotes, orderNotesForDisplay, renderNotesSection } from './fold.ts'
 import { DEFAULT_NOTE_COLOR, newNoteId, NOTE_COLORS, NoteError } from './runtime.ts'
 import type {
   NoteColor,
@@ -59,8 +62,9 @@ declare module '@deepseek-ai/dsh-session/types' {
      */
     'note/delete': { id: NoteId }
     /**
-     * Whether the `notes:context` system-prompt section includes the folded
-     * notes: log-only, non-surface, whole-value switch. The last
+     * Whether automatic note-task execution is on: after each settled turn
+     * the oldest note is delivered as one user message and removed, until
+     * the queue empties and the switch records itself off. The last
      * `note/inject` wins; a log with none folds to off.
      */
     'note/inject': { enabled: boolean }
@@ -199,6 +203,13 @@ export class NoteService extends TypertRemoteService {
         },
       })
     })
+    // The execution listener: when an agent's loop settles and the recorded
+    // switch is on, the oldest note becomes the next task — one user message
+    // per settled turn, until the queue empties and the switch turns off.
+    ctx.on('agent/status', ({ agent, status }) => {
+      if (status !== 'idle') return
+      this.executeNextNote(agent)
+    })
   }
 
   /**
@@ -250,7 +261,8 @@ export class NoteService extends TypertRemoteService {
   }
 
   /**
-   * Delete one note by id.
+   * Delete one note by id. Removing the last note while execution is on
+   * records the switch off, so the queue can never rest enabled and empty.
    * @param agent - owning live agent.
    * @param id - the note to remove.
    * @throws {@link NoteError} when the id is unknown — never a silent no-op.
@@ -263,26 +275,38 @@ export class NoteService extends TypertRemoteService {
       throw new NoteError(`note "${id}" does not exist in this session`, 'notes-not-found')
     }
     agent.session.append('note/delete', { id })
+    const next = this.stateOf(agent.session)
+    if (next.inject && next.notes.length === 0) {
+      agent.session.append('note/inject', { enabled: false })
+    }
   }
 
   /**
-   * Enable or disable the `notes:context` prompt section for this session.
-   * The recorded state already matching is a no-op without a log event.
+   * Enable or disable automatic note-task execution. Enabling an empty queue
+   * is refused — there is no task to run. Enabling while the loop is idle
+   * executes the first note immediately; enabling mid-turn hands the queue to
+   * the settle listener. The recorded state already matching is a no-op
+   * without a log event.
    * @param agent - owning live agent.
-   * @param enabled - whether folded notes join each model request.
+   * @param enabled - whether settled turns drain the note queue.
+   * @throws {@link NoteError} when enabling with no notes recorded.
    */
   @Remote('setInject')
   setInject(agent: Agent, enabled: boolean): void {
     this.assertLive(agent)
     const state = this.stateOf(agent.session)
     if (state.inject === enabled) return
+    if (enabled && state.notes.length === 0) {
+      throw new NoteError('there are no notes to execute; add one before enabling', 'notes-nothing-to-import')
+    }
     agent.session.append('note/inject', { enabled })
+    if (enabled && agent.status === 'idle') this.executeNextNote(agent)
   }
 
   /**
    * Import notes into the conversation as one user message: the selected
    * notes (all of them when `ids` is omitted) compose into a single
-   * pinned-first steer that the model sees on its next turn.
+   * oldest-first steer that the model sees on its next turn.
    * @param agent - owning live agent.
    * @param request - optional exact ids; every named id must exist.
    * @returns how many notes the composed message carried.
@@ -316,6 +340,32 @@ export class NoteService extends TypertRemoteService {
     if (this.ctx.agents.get(agent.id) !== agent) {
       throw new NoteError(`agent "${agent.id}" is not live in this registry`, 'notes-not-found')
     }
+  }
+
+  /**
+   * Deliver the queue's oldest note as the next task, one note per settled
+   * turn: record the deletion, record the switch off when the queue drained,
+   * then steer the note text so the loop starts the turn. No-op unless the
+   * agent is live, the switch is on, and notes remain.
+   * @param agent - the agent whose loop just settled (or that just enabled the switch).
+   */
+  private executeNextNote(agent: Agent): void {
+    if (this.ctx.agents.get(agent.id) !== agent) return
+    const state = this.stateOf(agent.session)
+    if (!state.inject) return
+    const next = orderNotesForDisplay(state.notes)[0]
+    if (next === undefined) {
+      agent.session.append('note/inject', { enabled: false })
+      return
+    }
+    agent.session.append('note/delete', { id: next.id })
+    if (state.notes.length === 1) {
+      agent.session.append('note/inject', { enabled: false })
+    }
+    agent.steer(createUserMessage({
+      content: [{ type: 'text', text: next.text }],
+      source: { kind: 'user' },
+    }))
   }
 
   /** Fold the session's current notes state from its durable log. */

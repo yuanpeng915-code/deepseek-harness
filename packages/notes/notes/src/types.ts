@@ -35,7 +35,7 @@ export interface NoteItem {
   readonly text: string
   /** Presentation color; model-invisible. */
   readonly color: NoteColor
-  /** Whether the note is pinned in the panel and import ordering. */
+  /** Whether the note carries the `[pinned]` marker in model-facing bullet bodies; ordering ignores it. */
   readonly pinned: boolean
   /** Epoch milliseconds of creation; set once and never rewritten. */
   readonly createdAt: number
@@ -45,7 +45,7 @@ export interface NoteItem {
 
 /**
  * The `notes` projection value: the session's current notes plus the
- * recorded model-context injection switch. Per-item rule: every `note/put`
+ * recorded task-execution switch. Per-item rule: every `note/put`
  * upserts one note in place, `note/delete` removes one, and `note/inject`
  * flips the switch, so the fold is deterministic order-wise without a
  * whole-value rewrite.
@@ -53,7 +53,11 @@ export interface NoteItem {
 export interface NotesState {
   /** Current notes in event order (insertion position; display ordering is a view concern). */
   readonly notes: readonly NoteItem[]
-  /** Whether the `notes:context` system-prompt section is enabled. */
+  /**
+   * Whether automatic note-task execution is enabled: after each settled
+   * turn the oldest note is delivered as a user message and removed, until
+   * the queue empties and the switch records itself off.
+   */
   readonly inject: boolean
 }
 

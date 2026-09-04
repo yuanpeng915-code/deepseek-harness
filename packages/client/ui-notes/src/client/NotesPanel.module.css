@@ -44,7 +44,7 @@
   color: var(--dsw-alias-label-primary);
 }
 
-.injectLabel {
+.executeLabel {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -58,7 +58,7 @@
   cursor: pointer;
 }
 
-.injectToggle {
+.executeToggle {
   flex: none;
   margin: 0;
   accent-color: var(--dsw-alias-state-business-primary);

@@ -110,37 +110,36 @@ describe('foldNotes', () => {
 })
 
 describe('orderNotesForDisplay', () => {
-  it('orders pinned first, then by creation, then by id', () => {
+  it('orders oldest created first with the id as the tiebreak, ignoring pins', () => {
     const a = note({ id: NoteId('note-a'), createdAt: 300 })
     const b = note({ id: NoteId('note-b'), createdAt: 100 })
     const c = note({ id: NoteId('note-c'), createdAt: 100, pinned: true })
-    const d = note({ id: NoteId('note-d'), createdAt: 100 })
-    expect(orderNotesForDisplay([a, b, c, d]).map(entry => entry.id)).toEqual(['note-c', 'note-b', 'note-d', 'note-a'])
+    expect(orderNotesForDisplay([a, b, c]).map(entry => entry.id)).toEqual(['note-b', 'note-c', 'note-a'])
   })
 })
 
 describe('renderNotesSection', () => {
-  it('renders nothing while injection is off or no notes exist', () => {
+  it('renders nothing while execution is off or no notes exist', () => {
     expect(renderNotesSection({ notes: [note()], inject: false })).toBe('')
     expect(renderNotesSection({ notes: [], inject: true })).toBe('')
   })
 
-  it('renders pinned-first bullets with markers while injection is on', () => {
+  it('renders oldest-first bullets with pin markers while execution is on', () => {
     const state: NotesState = {
       notes: [
-        note({ id: NoteId('note-b'), text: 'plain idea' }),
-        note({ id: NoteId('note-a'), text: 'urgent idea', pinned: true }),
+        note({ id: NoteId('note-b'), text: 'plain idea', createdAt: 200 }),
+        note({ id: NoteId('note-a'), text: 'urgent idea', pinned: true, createdAt: 300 }),
       ],
       inject: true,
     }
     expect(renderNotesSection(state)).toBe(
-      'The user\'s sticky notes for this conversation (pinned first):\n\n- [pinned] urgent idea\n- plain idea',
+      'The user\'s sticky notes for this conversation (oldest first):\n\n- plain idea\n- [pinned] urgent idea',
     )
   })
 })
 
 describe('composeImportText', () => {
-  it('composes the one-shot import body with the same pinned-first bullets', () => {
+  it('composes the one-shot import body with the same oldest-first bullets', () => {
     expect(composeImportText([note()])).toBe(
       'Here are my sticky notes to bring into this conversation:\n\n- first note',
     )

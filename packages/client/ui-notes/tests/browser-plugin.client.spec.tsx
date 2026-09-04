@@ -271,14 +271,14 @@ describe('NotesPanel', () => {
       notes: [
         note({ id: 'note-b' as NoteItem['id'], text: 'edited later', createdAt: 200, updatedAt: 300 }),
         note({ id: 'note-a' as NoteItem['id'], text: 'pinned idea', pinned: true, createdAt: 100, updatedAt: 150 }),
-        note({ id: 'note-c' as NoteItem['id'], text: 'plain', createdAt: 200, updatedAt: 200 }),
+        note({ id: 'note-c' as NoteItem['id'], text: 'plain', createdAt: 50, updatedAt: 200 }),
       ],
       inject: false,
     }
     const store = fakeStore()
     const shown = renderPanel({ ...fakeVerbs().verbs, actions: store.actions, useStore: store.useStore, useProjection: () => notes, t })
     const cards = shown.container.querySelectorAll('[data-note-card]')
-    expect([...cards].map(card => card.textContent)).toEqual(['pinned idea', 'edited later', 'plain'])
+    expect([...cards].map(card => card.textContent)).toEqual(['plain', 'pinned idea', 'edited later'])
     cleanup()
 
     const empty = fakeStore()
@@ -286,13 +286,14 @@ describe('NotesPanel', () => {
     expect(emptyShown.getByText('暂无便签')).toBeTruthy()
   })
 
-  it('wires the inject toggle, import, add, and close controls to the verbs and store', () => {
+  it('wires the execute toggle, import, add, and close controls to the verbs and store', () => {
     const notes: NotesState = { notes: [note()], inject: true }
     const store = fakeStore()
     const { verbs, calls } = fakeVerbs()
     const shown = renderPanel({ ...verbs, actions: store.actions, useStore: store.useStore, useProjection: () => notes, t })
     const checkbox = shown.getByRole('checkbox') as HTMLInputElement
     expect(checkbox.checked).toBe(true)
+    expect(checkbox.disabled).toBe(false)
     fireEvent.click(checkbox)
     fireEvent.click(shown.getByRole('button', { name: '导入对话' }))
     fireEvent.click(shown.getByRole('button', { name: '添加便签' }))
@@ -309,6 +310,7 @@ describe('NotesPanel', () => {
     const { verbs, calls } = fakeVerbs()
     const shown = renderPanel({ ...verbs, actions: store.actions, useStore: store.useStore, useProjection: () => null, t })
     expect((shown.getByRole('button', { name: '导入对话' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((shown.getByRole('checkbox') as HTMLInputElement).disabled).toBe(true)
     expect(shown.getByRole('alert').textContent).toBe('already holds 100 notes (notes-limit-reached)')
     expect(calls).toEqual([])
   })

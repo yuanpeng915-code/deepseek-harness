@@ -512,7 +512,7 @@ Source: [`packages/llm/llm-retry/src/types.ts:11`](../packages/llm/llm-retry/src
 'note/delete': { id: NoteId }
 ```
 
-Source: [`packages/notes/notes/src/index.ts:60`](../packages/notes/notes/src/index.ts)
+Source: [`packages/notes/notes/src/index.ts:63`](../packages/notes/notes/src/index.ts)
 
 <a id="noteinject--log-only"></a>
 
@@ -520,14 +520,15 @@ Source: [`packages/notes/notes/src/index.ts:60`](../packages/notes/notes/src/ind
 
 ```ts persistence-catalog
 /**
- * Whether the `notes:context` system-prompt section includes the folded
- * notes: log-only, non-surface, whole-value switch. The last
+ * Whether automatic note-task execution is on: after each settled turn
+ * the oldest note is delivered as one user message and removed, until
+ * the queue empties and the switch records itself off. The last
  * `note/inject` wins; a log with none folds to off.
  */
 'note/inject': { enabled: boolean }
 ```
 
-Source: [`packages/notes/notes/src/index.ts:66`](../packages/notes/notes/src/index.ts)
+Source: [`packages/notes/notes/src/index.ts:70`](../packages/notes/notes/src/index.ts)
 
 <a id="noteput--log-only"></a>
 
@@ -543,7 +544,7 @@ Source: [`packages/notes/notes/src/index.ts:66`](../packages/notes/notes/src/ind
 'note/put': { note: NoteItem }
 ```
 
-Source: [`packages/notes/notes/src/index.ts:55`](../packages/notes/notes/src/index.ts)
+Source: [`packages/notes/notes/src/index.ts:58`](../packages/notes/notes/src/index.ts)
 
 ### `permission/*`
 
