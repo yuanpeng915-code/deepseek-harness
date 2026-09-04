@@ -17,6 +17,7 @@ const CANONICAL = '## Known Limitations and Deferred Work'
 /** Packages audited as having no limitations section, keyed by repo-relative directory. */
 const NO_LIMITATIONS: Readonly<Record<string, string>> = {
   'packages/util/brand': 'Type-only nominal-branding primitive with no runtime behavior or deferred work.',
+  'packages/client/ui-model-board': 'Static pricing board over embedded constants; no interaction state, persistence, or deferred work.',
 }
 
 /** A heading that reads as a limitations section — canonical or drifted. */

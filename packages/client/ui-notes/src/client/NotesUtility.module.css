@@ -1,0 +1,7 @@
+/* NotesUtility: the positioning anchor for the trigger and its dropdown —
+   the panel measures itself against this box, not the wider strip. */
+
+.anchor {
+  position: relative;
+  display: inline-flex;
+}

@@ -1,0 +1,82 @@
+/* NoteCard: one colored paper card (noty palette). The tinted ground is a
+   theme token per color (`--dsw-specific-note-<color>`, light and dark
+   variants in design-platform.css); the left strip reuses the theme's static
+   palette accents. Component CSS holds no literal colors. */
+
+.card {
+  position: relative;
+  box-sizing: border-box;
+  padding: 6px 10px 8px 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: var(--dsw-specific-note-yellow);
+}
+
+.card[data-color='yellow'] { background: var(--dsw-specific-note-yellow); border-left-color: var(--dsw-static-amber-500); }
+.card[data-color='green'] { background: var(--dsw-specific-note-green); border-left-color: var(--dsw-static-green-500); }
+.card[data-color='blue'] { background: var(--dsw-specific-note-blue); border-left-color: var(--dsw-static-blue-500); }
+.card[data-color='pink'] { background: var(--dsw-specific-note-pink); border-left-color: var(--dsw-static-red-400); }
+.card[data-color='purple'] { background: var(--dsw-specific-note-purple); border-left-color: var(--dsw-static-deepseek-500); }
+.card[data-color='gray'] { background: var(--dsw-specific-note-gray); border-left-color: var(--dsw-static-neutral-bluish-500); }
+
+.top {
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+}
+
+.pinMark {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--dsw-alias-label-primary);
+  opacity: 0.7;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.card:hover .actions,
+.card:focus-within .actions {
+  opacity: 1;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.iconBtn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.text {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary);
+}

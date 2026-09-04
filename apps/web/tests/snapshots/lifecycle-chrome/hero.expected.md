@@ -12,6 +12,7 @@
   - img
 - button "Add workspace":
   - img
+- button "文件"
 - tree "Sessions":
   - treeitem "workspace" [expanded]:
     - img
@@ -20,6 +21,7 @@
 - button "Settings":
   - img
   - text: Settings
+- button "模型看板：当前低谷时段，输出 ¥13.5/百万tokens": 低谷 ¥13.5
 - text: Into the Unknown Preview
 - button "Choose workspace":
   - img

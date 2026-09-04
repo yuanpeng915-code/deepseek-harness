@@ -66,6 +66,15 @@
       config:
         maxNoteBytes: 8192
 
+    # Per-session sticky notes: the durable note/put|delete|inject stream, the
+    # notes projection, and the notes:context prompt section. The writes come
+    # from the browser panel only, so the row lives in this web bundle.
+    - id: notes
+      name: '@deepseek-ai/dsh-notes'
+      config:
+        maxNoteBytes: 4096
+        maxNotes: 100
+
     # Browser Session export: `/export` command plus the shared download dialog.
     - id: session-log-download
       name: '@deepseek-ai/dsh-session-log-export'
@@ -271,6 +280,11 @@
     # Goal surface: GoalBar in the input dock over the goal session projection.
     - id: ui-goal
       name: '@deepseek-ai/dsh-client-ui-goal'
+
+    # Sticky notes: the body-utilities trigger + dropdown panel over the notes
+    # projection and the notes Remote (put/delete/setInject/importAsMessage).
+    - id: ui-notes
+      name: '@deepseek-ai/dsh-client-ui-notes'
 
     # Per-message feedback: Like/Dislike plus an optional note in the
     # assistant-message action strip, over the messageFeedback Remote.

@@ -498,6 +498,53 @@ Source: [`packages/llm/llm-retry/src/types.ts:9`](../packages/llm/llm-retry/src/
 
 Source: [`packages/llm/llm-retry/src/types.ts:11`](../packages/llm/llm-retry/src/types.ts)
 
+### `note/*`
+
+<a id="notedelete--log-only"></a>
+
+#### `note/delete` — log-only
+
+```ts persistence-catalog
+/**
+ * One note removed by id: log-only, non-surface. Deleting an absent id
+ * changes nothing on replay; the service rejects it before appending.
+ */
+'note/delete': { id: NoteId }
+```
+
+Source: [`packages/notes/notes/src/index.ts:60`](../packages/notes/notes/src/index.ts)
+
+<a id="noteinject--log-only"></a>
+
+#### `note/inject` — log-only
+
+```ts persistence-catalog
+/**
+ * Whether the `notes:context` system-prompt section includes the folded
+ * notes: log-only, non-surface, whole-value switch. The last
+ * `note/inject` wins; a log with none folds to off.
+ */
+'note/inject': { enabled: boolean }
+```
+
+Source: [`packages/notes/notes/src/index.ts:66`](../packages/notes/notes/src/index.ts)
+
+<a id="noteput--log-only"></a>
+
+#### `note/put` — log-only
+
+```ts persistence-catalog
+/**
+ * One note created or replaced by id: log-only, non-surface, per-item
+ * upsert. The payload is the whole post-write item; an unknown id appends
+ * at the end, a known id replaces in place. Carries the note's color and
+ * pin state so the fold needs no other write event.
+ */
+'note/put': { note: NoteItem }
+```
+
+Source: [`packages/notes/notes/src/index.ts:55`](../packages/notes/notes/src/index.ts)
+
 ### `permission/*`
 
 <a id="permissionpreset--log-only"></a>

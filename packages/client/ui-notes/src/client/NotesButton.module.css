@@ -1,0 +1,25 @@
+/* NotesButton: the composer-left trigger (same icon-button family as the
+   composer's other left-strip entries). */
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.trigger[data-open] {
+  color: var(--dsw-alias-state-business-primary);
+}

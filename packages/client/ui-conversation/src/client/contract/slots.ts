@@ -104,6 +104,12 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'conversation.session.header.utilities': { kind: 'list'; scope: 'session'; owner: ConversationHeaderActionOwnerProps }
     /**
+     * Right-aligned utility strip pinned between the header divider and the
+     * resident scrollport — the message area's top edge. Entries anchor their
+     * own dropdown overlays; the strip collapses while unoccupied.
+     */
+    'conversation.session.body.utilities': { kind: 'list'; scope: 'session'; owner: ConversationHeaderActionOwnerProps }
+    /**
      * The conversation view ring: one list entry per view tab (chat here;
      * trajectory/waterfall from ui-trajectory), rendered one-at-a-time by
      * the session body via `only: <active id>`. Declared by this package's
@@ -639,6 +645,7 @@ export interface HeroBrandMarkOwnerProps {
 export type ConversationSlotProps =
   PropsRuntime<'conversation'> & PropsRenderSlots<
     | 'conversation.session' | 'conversation.session.header'
+    | 'conversation.session.body.utilities'
     | 'conversation.composer' | 'conversation.composer.bar'
     | 'conversation.input.overlay'
     | 'conversation.input.dock' | 'conversation.composer.dock'

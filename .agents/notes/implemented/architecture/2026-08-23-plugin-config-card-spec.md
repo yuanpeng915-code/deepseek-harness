@@ -10,7 +10,7 @@ The Settings → Plugins tabs (configurable plugins, plugin list, dynamic plugin
 
 ## Decision
 
-The card chrome lives in one shared primitive pair in `ui-primitives`: `SettingsCard` (border `--dsw-alias-border-l2`, radius 10px, background `--dsw-alias-bg-layer-3`, `open` highlight to `border-l1` + `bg-layer-2`, plus a `data-open` marker) and `SettingsCardSection` (the 760px column). The primitive owns only chrome; content layout (padding, gaps, header/body) stays in the feature's CSS module through the card's `className`. `ui-cordis`'s `CordisPanel` (the dynamic-plugins tab) consumes both primitives. The spec is documented in [`docs/web-styling.md`](../../../docs/web-styling.md) under "Plugin configuration cards".
+The card chrome lives in one shared primitive pair in `ui-primitives`: `SettingsCard` (border `--dsw-alias-border-l2`, radius 10px, background `--dsw-alias-bg-layer-3`, `open` highlight to `border-l1` + `bg-layer-2`, plus a `data-open` marker) and `SettingsCardSection` (the 760px column). The primitive owns only chrome; content layout (padding, gaps, header/body) stays in the feature's CSS module through the card's `className`. `ui-cordis`'s `CordisPanel` (the dynamic-plugins tab) consumes both primitives. The spec is documented in [`docs/web-styling.md`](../../../../docs/web-styling.md) under "Plugin configuration cards".
 
 ## Alternatives considered
 

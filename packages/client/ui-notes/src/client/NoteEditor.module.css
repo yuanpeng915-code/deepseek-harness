@@ -1,0 +1,101 @@
+/* NoteEditor: textarea + palette row. The editor sits on a plain surface so
+   the colored paper only appears on cards. */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  resize: none;
+  padding: 6px 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-base);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--dsw-alias-state-business-primary);
+}
+
+.input::placeholder {
+  color: var(--dsw-alias-label-caption);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.palette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  background: var(--dsw-specific-note-yellow);
+  cursor: pointer;
+}
+
+.swatch[data-color='yellow'] { background: var(--dsw-specific-note-yellow); }
+.swatch[data-color='green'] { background: var(--dsw-specific-note-green); }
+.swatch[data-color='blue'] { background: var(--dsw-specific-note-blue); }
+.swatch[data-color='pink'] { background: var(--dsw-specific-note-pink); }
+.swatch[data-color='purple'] { background: var(--dsw-specific-note-purple); }
+.swatch[data-color='gray'] { background: var(--dsw-specific-note-gray); }
+
+.swatch[data-selected] {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 1px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.cancelBtn {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.saveBtn {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-state-business-primary);
+  color: var(--dsw-static-neutral-bluish-00);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.saveBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

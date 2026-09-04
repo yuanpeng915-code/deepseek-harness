@@ -243,6 +243,12 @@ body {
   --dsw-specific-sidebar-nav-item-active: var(--dsw-static-neutral-bluish-100);
   --dsw-specific-sidebar-nav-item-hover: var(--dsw-static-neutral-bluish-75);
   --dsw-specific-tip: var(--dsw-static-neutral-bluish-60);
+  --dsw-specific-note-yellow: var(--dsw-static-amber-100);
+  --dsw-specific-note-green: var(--dsw-static-green-100);
+  --dsw-specific-note-blue: var(--dsw-static-blue-100);
+  --dsw-specific-note-pink: var(--dsw-static-red-100);
+  --dsw-specific-note-purple: var(--dsw-static-deepseek-100);
+  --dsw-specific-note-gray: var(--dsw-static-neutral-bluish-100);
 }
 
 body[data-ds-dark-theme] {
@@ -335,4 +341,10 @@ body[data-ds-dark-theme] {
   --dsw-specific-sidebar-nav-item-active: var(--dsw-static-neutral-bluish-750);
   --dsw-specific-sidebar-nav-item-hover: var(--dsw-static-neutral-bluish-850);
   --dsw-specific-tip: var(--dsw-static-neutral-bluish-800);
+  --dsw-specific-note-yellow: var(--dsw-static-amber-900);
+  --dsw-specific-note-green: var(--dsw-static-green-900);
+  --dsw-specific-note-blue: var(--dsw-static-blue-950);
+  --dsw-specific-note-pink: var(--dsw-static-red-900);
+  --dsw-specific-note-purple: var(--dsw-static-deepseek-800);
+  --dsw-specific-note-gray: var(--dsw-static-neutral-bluish-850);
 }

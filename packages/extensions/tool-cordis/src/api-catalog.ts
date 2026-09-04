@@ -1078,6 +1078,38 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'notes',
+    summary: 'Notes service (`ctx.notes`) backed exclusively by the owning session log.',
+    description: 'Notes service (`ctx.notes`) backed exclusively by the owning session log. State is folded on demand: note events are few relative to a session log, and every mutation already pays a durable append, so the linear scan keeps the service stateless across log reloads without a live mirror.',
+    methods: [
+      {
+        signature: '@Remote(\'put\') put(agent: Agent, request: NotePutRequest): NoteItem',
+        description: 'Create one note (no `id`) or replace one existing note.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'body text plus optional identity, color, and pin state.' }],
+        returns: 'the committed item.',
+        throws: ['{@link NoteError} on blank or oversized text, an unknown color or id, or a creation past `maxNotes`.'],
+      },
+      {
+        signature: '@Remote(\'delete\') delete(agent: Agent, id: NoteId): void',
+        description: 'Delete one note by id.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'id', description: 'the note to remove.' }],
+        throws: ['{@link NoteError} when the id is unknown — never a silent no-op.'],
+      },
+      {
+        signature: '@Remote(\'setInject\') setInject(agent: Agent, enabled: boolean): void',
+        description: 'Enable or disable the `notes:context` prompt section for this session. The recorded state already matching is a no-op without a log event.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'enabled', description: 'whether folded notes join each model request.' }],
+      },
+      {
+        signature: '@Remote(\'import\') importAsMessage(agent: Agent, request: NoteImportRequest): NoteImportResult',
+        description: 'Import notes into the conversation as one user message: the selected notes (all of them when `ids` is omitted) compose into a single pinned-first steer that the model sees on its next turn.',
+        parameters: [{ name: 'agent', description: 'owning live agent.' }, { name: 'request', description: 'optional exact ids; every named id must exist.' }],
+        returns: 'how many notes the composed message carried.',
+        throws: ['{@link NoteError} on an unknown id or when there is nothing to import.'],
+      },
+    ],
+  },
+  {
     key: 'permissionPresets',
     summary: 'Owns the deployment\'s permission presets and their write path.',
     description: 'Owns the deployment\'s permission presets and their write path. Requires a confining `ctx.shell` executor and `ctx.approval`; unmatched knob values are reported as CUSTOM_PRESET, not an error.',
@@ -3796,6 +3828,30 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ModelModalityMap',
     declaration: 'export interface ModelModalityMap {\n    text: \'text\';\n    image: \'image\';\n}',
+  },
+  {
+    name: 'NoteColor',
+    declaration: 'export type NoteColor = \'yellow\' | \'green\' | \'blue\' | \'pink\' | \'purple\' | \'gray\';',
+  },
+  {
+    name: 'NoteId',
+    declaration: 'export type NoteId = Branded<\'NoteId\'>;',
+  },
+  {
+    name: 'NoteImportRequest',
+    declaration: 'export interface NoteImportRequest {\n    readonly ids?: readonly NoteId[];\n}',
+  },
+  {
+    name: 'NoteImportResult',
+    declaration: 'export interface NoteImportResult {\n    readonly count: number;\n}',
+  },
+  {
+    name: 'NoteItem',
+    declaration: 'export interface NoteItem {\n    readonly id: NoteId;\n    readonly text: string;\n    readonly color: NoteColor;\n    readonly pinned: boolean;\n    readonly createdAt: number;\n    readonly updatedAt: number;\n}',
+  },
+  {
+    name: 'NotePutRequest',
+    declaration: 'export interface NotePutRequest {\n    readonly id?: NoteId;\n    readonly text: string;\n    readonly color?: NoteColor;\n    readonly pinned?: boolean;\n}',
   },
   {
     name: 'ObjectJsonSchema',

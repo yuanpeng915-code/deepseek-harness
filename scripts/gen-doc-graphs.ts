@@ -373,6 +373,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Folds revisioned objective state from the session log and keeps live continuation activation process-local.',
   },
   {
+    key: 'notes',
+    pkg: 'notes',
+    title: 'Session sticky notes',
+    mode: 'core',
+    consumers: ['apiproxy'],
+    note: 'Folds user-owned per-session notes from per-item note/* events, serves the panel Remote, and owns the optional notes:context injection section plus the one-shot import steer.',
+  },
+  {
     key: 'e2b',
     pkg: 'e2b',
     title: 'E2B sandbox lifecycle owner',

@@ -137,6 +137,26 @@
   display: none;
 }
 
+/* Body utility strip: pinned between the header divider and the resident
+   scrollport, right edge aligned with the header's utilities column. The
+   raised stacking lets an entry's dropdown overlay cover the scroll area. */
+.bodyTools {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  padding: 4px 28px 0;
+}
+
+.bodyTools:empty {
+  display: none;
+}
+
+.root[data-phase='hero'] .bodyTools {
+  display: none;
+}
+
 /* figma Tab_Group 34:11441: 35px strip, gap 36, pad-left 8, tabs bottom-aligned. */
 .tabs {
   position: relative;

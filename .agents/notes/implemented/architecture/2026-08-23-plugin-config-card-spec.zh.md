@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-卡片外观集中在 `ui-primitives` 的一对共享原语中：`SettingsCard`（边框 `--dsw-alias-border-l2`、圆角 10px、背景 `--dsw-alias-bg-layer-3`、`open` 高亮为 `border-l1` + `bg-layer-2`，并带 `data-open` 标记）与 `SettingsCardSection`（760px 列）。原语只负责外观；内容布局（内边距、间距、头部/主体）通过卡片的 `className` 留在功能包的 CSS 模块中。`ui-cordis` 的 `CordisPanel`（动态插件 tab）已消费这两个原语。该规范记录在 [`docs/web-styling.md`](../../../docs/web-styling.md) 的「Plugin configuration cards」一节。
+卡片外观集中在 `ui-primitives` 的一对共享原语中：`SettingsCard`（边框 `--dsw-alias-border-l2`、圆角 10px、背景 `--dsw-alias-bg-layer-3`、`open` 高亮为 `border-l1` + `bg-layer-2`，并带 `data-open` 标记）与 `SettingsCardSection`（760px 列）。原语只负责外观；内容布局（内边距、间距、头部/主体）通过卡片的 `className` 留在功能包的 CSS 模块中。`ui-cordis` 的 `CordisPanel`（动态插件 tab）已消费这两个原语。该规范记录在 [`docs/web-styling.md`](../../../../docs/web-styling.zh.md) 的「Plugin configuration cards」一节。
 
 ## Alternatives considered
 

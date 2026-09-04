@@ -1,62 +1,64 @@
-# DeepSeek 文件树插件（deepseek-file-tree）
+# DeepSeek file tree plugin (deepseek-file-tree)
 
-DSH 侧边栏的**非侵入式**文件树插件：在工作区浏览器头部（搜索 / 视图选项 / 添加工作区图标旁）新增一个「文件」文件夹图标，点击打开一个覆盖在侧边栏上的**文件树抽屉**，按 VS Code 目录树风格递归展示当前工作区的文件与文件夹（可折叠）。每个文件/文件夹行尾有一个「+」号，点击后把该路径追加到当前对话框草稿。**原工作区浏览器完全不受影响**，窄栏（rail）收起时图标照常显示。
+English | [中文](README.zh.md)
 
-- 插件 ID：`file-2`
-- 当前包：`file-2/pkg-7`
-- 依赖发货的 `sidebar.workspaces.action` 头部动作插槽（`@deepseek-ai/dsh-client-ui-workspace`）
-- 动态 Cordis 插件（进程级，重启后需按 `plugin-source.js` 重新定义）
+A **non-invasive** file tree plugin for the DSH sidebar: it adds a folder icon labeled "Files" to the workspace browser header (next to the search / view-options / add-workspace icons). Clicking it opens a **file tree drawer** overlaid on the sidebar, showing the current workspace's files and folders recursively in a VS Code-style tree with collapsible folders. Every file/folder row ends with a "+" that appends that path to the current composer draft. **The original workspace browser is untouched**; the icon still shows while the rail is collapsed.
 
-## 功能
+- Plugin id: `file-2`
+- Current package: `file-2/pkg-7`
+- Depends on the shipped `sidebar.workspaces.action` header action slot (`@deepseek-ai/dsh-client-ui-workspace`)
+- Dynamic Cordis plugin (process-level; after a restart it must be re-defined from `plugin-source.js`)
 
-| 交互 | 行为 |
+## Features
+
+| Interaction | Behavior |
 | --- | --- |
-| 头部「文件」图标 | 工作区浏览器头部（`sidebar.workspaces.action`），文件夹图标，宽栏 16px / 窄栏 18px；点击开关抽屉 |
-| 抽屉 | `shell.overlay` 浮层，覆盖在侧边栏左侧（280px 宽、全高），含标题（当前工作区名）、刷新、关闭 |
-| 文件树 | 广度优先递归展示当前工作区目录；文件夹可展开/折叠（chevron 旋转） |
-| 「+」号 | 每个文件/文件夹行尾的 outline plus（样式与工作区项目「+」一致，悬停高亮）；点击把绝对路径追加到对话框 |
+| Header "Files" icon | In the workspace browser header (`sidebar.workspaces.action`), folder icon, 16px wide-rail / 18px narrow-rail; click toggles the drawer |
+| Drawer | `shell.overlay` float overlaying the sidebar's left side (280px wide, full height), with a title (current workspace name), refresh, and close |
+| File tree | Breadth-first recursive listing of the current workspace directory; folders expand/collapse (chevron rotation) |
+| "+" | An outline plus at the end of every file/folder row (styled like the workspace item "+", highlighted on hover); clicking appends the absolute path to the composer |
 
-## 架构
+## Architecture
 
 ```
 ┌─ Host half ──────────────────────────────────────────┐
 │ harness.handle('file:tree', { root })                │
-│   → ctx.get('fs').listDir 广度优先递归建树            │
+│   → ctx.get('fs').listDir breadth-first tree build   │
 │   → { ok, root, tree: [{name,path,kind,children}] } │
 └──────────────────────────────────────────────────────┘
         │ host.call('file:tree')
         ▼
 ┌─ Client half ────────────────────────────────────────┐
-│ FileTreeToggle（sidebar.workspaces.action）→ 头部图标开关抽屉 │
-│ FileTreeDrawer（shell.overlay）→ 抽屉 + 树渲染         │
-│   └─ TreeNode 递归渲染，折叠 + 「+」                    │
-│ InsertBridge（conversation.input.right，会话作用域）   │
-│   → useInput + inputActions.setDraft 追加路径         │
+│ FileTreeToggle (sidebar.workspaces.action) → header icon toggles drawer │
+│ FileTreeDrawer (shell.overlay) → drawer + tree render│
+│   └─ TreeNode recursive render, collapse + "+"       │
+│ InsertBridge (conversation.input.right, session scope)│
+│   → useInput + inputActions.setDraft appends path    │
 └──────────────────────────────────────────────────────┘
 ```
 
-- **非侵入**：不占用 `sidebar.workspaces`（单槽、会遮蔽发货 UI），原工作区浏览器保持完整。
-- **建树**：广度优先（BFS），每层先列完所有兄弟再深入，避免字母序靠前的深层目录耗尽预算、饿死其它顶层项。
-- **路径插入**：侧边栏/浮层（root 作用域）没有 `inputActions`，因此用挂在 `conversation.input.right`（会话作用域，随 composer 稳定渲染）的隐形桥接组件拿到 `useInput`/`inputActions`，`setDraft(旧草稿 + ' ' + 路径)` 实现追加。
-- **目录忽略**：跳过 `node_modules`、`.git`、`lib`、`dist`、`build`、`out`、`coverage`、`.DS_Store`、`.dsh-build`、`.next`、`.turbo`、`.cache`、`.pnpm-store`、`.vite`；深度上限 12、条目上限 5000。
+- **Non-invasive**: it does not occupy `sidebar.workspaces` (single slot, would shadow shipped UI); the original workspace browser stays intact.
+- **Tree build**: breadth-first (BFS), listing each level's siblings before descending, so alphabetically-early deep directories cannot exhaust the budget and starve other top-level items.
+- **Path insertion**: the sidebar/overlay (root scope) has no `inputActions`, so an invisible bridge component mounted on `conversation.input.right` (session scope, rendered stably with the composer) obtains `useInput`/`inputActions` and appends via `setDraft(oldDraft + ' ' + path)`.
+- **Ignored directories**: `node_modules`, `.git`, `lib`, `dist`, `build`, `out`, `coverage`, `.DS_Store`, `.dsh-build`, `.next`, `.turbo`, `.cache`, `.pnpm-store`, `.vite`; depth cap 12, entry cap 5000.
 
-## 数据模型
+## Data model
 
 ```ts
 interface TreeNode {
-  name: string       // 文件名/文件夹名
-  path: string       // 绝对路径（插入对话框用）
+  name: string       // file/folder name
+  path: string       // absolute path (used for insertion into the composer)
   kind: 'dir' | 'file'
-  children?: TreeNode[]  // 仅目录有
+  children?: TreeNode[]  // directories only
 }
-// file:tree 返回 { ok: true, root: string, tree: TreeNode[] }
+// file:tree returns { ok: true, root: string, tree: TreeNode[] }
 ```
 
-## 已知权衡
+## Known trade-offs
 
-- 文件树是**抽屉覆盖**而非替换侧边栏区域：打开时覆盖在侧边栏上方，关闭后原工作区浏览器仍在原位。这牺牲了「同一区域直接切换」的体验，但换来了零侵入、原功能完整。
-- 忽略构建产物目录（`node_modules`/`lib`/`dist` 等）；如需展示，编辑 Host 半的 `IGNORED` 表并重新定义。
+- The tree is a **drawer overlay**, not a replacement for a sidebar region: while open it covers the sidebar, and on close the original workspace browser is still in place. This trades the "switch in place" experience for zero invasiveness.
+- Build-output directories (`node_modules`/`lib`/`dist` etc.) are ignored; to show them, edit the Host half's `IGNORED` table and re-define.
 
-## 源码
+## Source
 
-完整可复现源码见同目录 [`plugin-source.js`](./plugin-source.js)（Host 半 + Client 半两个函数体，可直接用于 `cordis_define` 的 `code.host` / `code.client`）。
+The complete reproducible source lives in [`plugin-source.js`](./plugin-source.js) alongside this file (the Host half and Client half function bodies, ready for `cordis_define`'s `code.host` / `code.client`).

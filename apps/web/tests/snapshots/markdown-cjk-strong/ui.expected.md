@@ -7,6 +7,8 @@
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
+- button "Sticky notes":
+  - img
 - text: Render adjacent CJK strong emphasis. {{clock}}
 - button "Copy":
   - img

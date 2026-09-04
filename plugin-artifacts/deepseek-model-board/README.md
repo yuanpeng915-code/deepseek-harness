@@ -1,93 +1,97 @@
-# DeepSeek 模型看板插件（deepseek-model-board）
+# DeepSeek model board plugin (deepseek-model-board)
 
-DSH Web 左下角**设置按钮右侧**的模型看板组件（侧边栏脚部布局已改为「设置居左、附加动作居右」）。当前内置「峰谷定价」看板：常驻显示当前时段处于哪个阶段（高峰/低谷）及对应价格，鼠标悬停弹出浮层展示全部定价时段的详细信息。组件采用「看板注册表 + 按类型分发的渲染器」架构，便于后续扩展更多看板功能。
+English | [中文](README.zh.md)
 
-- 插件 ID：`board-2`（原 `board-1` 被误删后按 `plugin-source.js` 重新创建）
-- 当前包：`board-2/pkg-4`（动态 Cordis 插件，进程级，重启后需按源码重新定义，见 `plugin-source.js`）
-- 数据口径：DeepSeek 官方计费公告，2026-08-23 生效，北京时间
+A model board component to the **right of the sidebar Settings trigger** in the bottom-left of the DSH web app (the sidebar footer layout is now "Settings on the left, extra actions on the right"). The built-in board is the "peak/off-peak pricing" board: it permanently shows the current pricing phase (peak/off-peak) and its price, and hovering opens an overlay with the full pricing schedule. The component uses a "board registry + renderer dispatch by kind" architecture, ready for more board features later.
+
+- Plugin id: `board-2` (`board-1` was accidentally deleted and re-created from `plugin-source.js`)
+- Current package: `board-2/pkg-4` (dynamic Cordis plugin, process-level; after a restart it must be re-defined from the source, see `plugin-source.js`)
+- Data basis: DeepSeek official pricing announcement, effective 2026-08-23, Beijing time
 
 ---
 
-## 1. 功能说明
+## 1. Features
 
-| 交互 | 行为 |
+| Interaction | Behavior |
 | --- | --- |
-| 常驻按钮 | 位于侧边栏底部设置按钮**右侧**（`sidebar.footer.action` 插槽，现渲染在 Settings 右边）。宽栏显示「⦿ 低谷 ¥13.5」形式的阶段 + 输出价格；窄栏（56px rail）只显示阶段圆点 |
-| 阶段圆点 | 高峰 = 橙色（`--dsw-alias-state-warn-primary`），低谷 = 绿色（`--dsw-alias-state-success-primary`），随主题切换 |
-| 鼠标悬停 | 弹出看板浮层（`shell.overlay` 框架级浮层，不被侧边栏滚动容器裁剪），自动定位在按钮上方 |
-| 浮层内容 | ① 当前时段卡片：阶段、输出价格、缓存命中输入价格、下次切换倒计时（周末额外显示「周末统一低谷价」徽标）；② 全部定价时段明细：工作日各时段 + 价格、周末全天低谷价规则；③ 数据来源与生效日期脚注 |
-| 键盘可达 | 按钮可聚焦（Tab），聚焦/失焦等价于悬停开/关；带 `aria-label` |
-| 自动刷新 | 阶段与倒计时每 30s 按**北京时间**（`Intl` 时区计算）重新判定，与本地时区无关 |
+| Persistent button | To the **right** of the sidebar's bottom Settings button (`sidebar.footer.action` slot, rendered next to Settings). Wide rail shows "⦿ Off-peak ¥13.5" (phase + output price); the narrow 56px rail shows only the phase dot |
+| Phase dot | Peak = orange (`--dsw-alias-state-warn-primary`), off-peak = green (`--dsw-alias-state-success-primary`), theme-aware |
+| Hover | Opens the board overlay (`shell.overlay` framework-level float, not clipped by the sidebar's scroll container), positioned above the button |
+| Overlay content | ① Current-phase card: phase, output price, cache-hit input price, countdown to the next switch (weekends additionally show a "weekend unified off-peak price" badge); ② full schedule details: weekday windows + prices, weekend all-off-peak rule; ③ source and effective-date footnote |
+| Keyboard access | The button is focusable (Tab); focus/blur is equivalent to hover on/off; carries an `aria-label` |
+| Auto refresh | Phase and countdown re-evaluate every 30s on the **Beijing clock** (`Intl` timezone computation), independent of the local timezone |
 
-当前内置的峰谷规则（DeepSeek 官方公告，2026-08-23 生效）：
+The built-in peak/off-peak rules (DeepSeek official announcement, effective 2026-08-23):
 
-- 工作日（周一至周五）：高峰时段为北京时间 09:00–12:00、14:00–18:00；其余时间为低谷时段
-- 低谷价格为高峰价格的 50%
-- 周末（周六、周日）：全天统一按低谷价计费
+- Weekdays (Mon–Fri): peak windows are 09:00–12:00 and 14:00–18:00 Beijing time; all other times are off-peak
+- The off-peak price is 50% of the peak price
+- Weekends (Sat, Sun): all day is billed at the off-peak price
 
-内置模型示例（DeepSeek-V4-Pro，单位 元 / 百万 tokens）：
+Built-in model example (DeepSeek-V4-Pro, unit: yuan per million tokens):
 
-| 项目 | 高峰 | 低谷 |
+| Item | Peak | Off-peak |
 | --- | --- | --- |
-| 输出 | ¥27.0 | ¥13.5 |
-| 缓存命中输入 | ¥0.30 | ¥0.15 |
+| Output | ¥27.0 | ¥13.5 |
+| Cache-hit input | ¥0.30 | ¥0.15 |
 
-## 2. 架构
+## 2. Architecture
 
 ```
-┌─ Host half（Node 进程）────────────────────────────┐
-│ 看板注册表 boards[]（内置 pricing 看板，含时段与价格数据）│
-│   └─ 私有 RPC: harness.handle('board:snapshot')     │
+┌─ Host half (Node process) ─────────────────────────┐
+│ Board registry boards[] (built-in pricing board,   │
+│   with schedule and price data)                    │
+│   └─ Private RPC: harness.handle('board:snapshot') │
 └────────────────────────────────────────────────────┘
-        │ host.call('board:snapshot')（Client→Host JSON）
+        │ host.call('board:snapshot') (Client→Host JSON)
         ▼
-┌─ Client half（浏览器页面）──────────────────────────┐
-│ 共享 store（snapshot / open / anchor，闭包订阅）       │
-│ ├─ sidebar.footer.action  →  BoardButton（阶段+价格） │
-│ ├─ shell.overlay          →  BoardPanel（浮层，定位） │
-│ └─ renderers{ kind: 视图 }  ← 按 kind 分发渲染（扩展点）│
-│     pricing → PricingBoardView                       │
+┌─ Client half (browser page) ───────────────────────┐
+│ Shared store (snapshot / open / anchor, closure     │
+│ subscription)                                       │
+│ ├─ sidebar.footer.action  →  BoardButton (phase+price)│
+│ ├─ shell.overlay          →  BoardPanel (overlay)   │
+│ └─ renderers{ kind: view }  ← dispatch by kind      │
+│     pricing → PricingBoardView                      │
 └────────────────────────────────────────────────────┘
 ```
 
-- **数据方向**：数据只存 Host 注册表；Client 通过 Package-private RPC 拉取纯 JSON 快照，阶段判定在 Client 本地完成（快照含 schedule，Client 每 30s 重算）。
-- **生命周期**：所有注册（`slots.inject/register`、`styles.insert`、`harness.handle`、`ctx.interval/timeout`）都挂在 Cordis Fiber 上，`cordis_stop` / 更新 / 删除时自动清理；Client 声明 `inject: ['timer']` 使用定时器。
-- **样式**：全部使用主题 CSS 变量（`--dsw-alias-*`），自动适配亮/暗主题，不覆盖全局主题。
+- **Data direction**: data lives only in the Host registry; the Client pulls a pure JSON snapshot through the package-private RPC, and phase determination happens locally on the Client (the snapshot carries the schedule; the Client recomputes every 30s).
+- **Lifecycle**: every registration (`slots.inject/register`, `styles.insert`, `harness.handle`, `ctx.interval/timeout`) rides the Cordis Fiber and is cleaned up automatically on `cordis_stop`, update, or deletion; the Client declares `inject: ['timer']` for timers.
+- **Styling**: everything uses theme CSS variables (`--dsw-alias-*`), adapting to light/dark automatically, and never overrides the global theme.
 
-## 3. 数据模型
+## 3. Data model
 
-快照（`board:snapshot` 返回值）：
+The snapshot (the `board:snapshot` return value):
 
 ```ts
 interface Snapshot {
   version: number          // 1
-  generatedAt: string      // ISO 时间
+  generatedAt: string      // ISO time
   timezoneLabel: string    // '北京时间 (UTC+8)'
-  source: string           // 数据来源说明
-  sourceUrl: string        // 官方定价页
-  updatedAt: string        // 数据生效日期 '2026-08-23'
+  source: string           // data-source description
+  sourceUrl: string        // official pricing page
+  updatedAt: string        // effective date '2026-08-23'
   boards: Board[]
 }
 
 interface Board {
-  id: string               // 唯一标识，如 'pricing'
-  kind: string             // 渲染类型，Client 按此分发渲染器，如 'pricing'
-  title: string            // 看板标题
-  description: string      // 一句话说明
-  [extra: string]: unknown // 看板自有数据，随 kind 不同而不同
+  id: string               // unique id, e.g. 'pricing'
+  kind: string             // render kind; the Client dispatches a renderer by it, e.g. 'pricing'
+  title: string            // board title
+  description: string      // one-line description
+  [extra: string]: unknown // board-owned data, differs by kind
 }
 
-// pricing 看板的自有数据
+// The pricing board's own data
 interface PricingBoardData {
   schedule: {
     timezone: string            // 'Asia/Shanghai'
-    weekdayPeakWindows: Array<{ start: string; end: string }>  // 'HH:MM'，北京时间
-    weekendAllOffPeak: boolean  // 周末全天低谷
-    offPeakFactor: number       // 低谷价 = 高峰价 × factor（0.5）
+    weekdayPeakWindows: Array<{ start: string; end: string }>  // 'HH:MM', Beijing time
+    weekendAllOffPeak: boolean  // weekends all off-peak
+    offPeakFactor: number       // off-peak = peak × factor (0.5)
   }
   models: Array<{
     id: string
-    name: string                // 展示名，如 'DeepSeek-V4-Pro'
+    name: string                // display name, e.g. 'DeepSeek-V4-Pro'
     unit: string                // '元 / 百万 tokens'
     prices: {
       peak:    { inputCacheHit?: number; inputCacheMiss?: number; output: number }
@@ -97,70 +101,70 @@ interface PricingBoardData {
 }
 ```
 
-约定：
+Conventions:
 
-- 阶段取值只有 `'peak' | 'offPeak'`，由 `schedule` 推导（先判周末，再判工作日高峰窗口）。
-- 价格字段中 `output` 必填；`inputCacheHit` / `inputCacheMiss` 可选，缺省时 UI 不渲染对应价格行（当前内置数据仅含官方公布的输出价与缓存命中输入价）。
+- The phase is only `'peak' | 'offPeak'`, derived from `schedule` (weekend first, then weekday peak windows).
+- Among price fields, `output` is required; `inputCacheHit` / `inputCacheMiss` are optional, and the UI omits those rows when absent (the built-in data currently carries only the officially published output and cache-hit input prices).
 
-## 4. 扩展指南
+## 4. Extension guide
 
-### 4.1 更新价格 / 时段（DeepSeek 再次调价时）
+### 4.1 Update prices / windows (when DeepSeek reprices)
 
-数据是代码内常量（动态插件无持久化配置）。修改 Host half 中 `boards[0]` 的 `schedule` / `models`，然后：
+Data is an in-code constant (a dynamic plugin has no persisted config). Edit `boards[0]`'s `schedule` / `models` in the Host half, then:
 
-1. `cordis_define`（kind: existing，pluginId `board-1`）追加新 Package；
-2. `cordis_run`（mode: `update`）切换到新包。
+1. `cordis_define` (kind: existing, pluginId `board-1`) to append a new package;
+2. `cordis_run` (mode: `update`) to switch to the new package.
 
-改动只影响展示数据，无需动 Client 代码。
+The change only affects display data; no Client code changes.
 
-### 4.2 新增模型
+### 4.2 Add a model
 
-在 pricing 看板的 `models` 数组追加一项（id / name / unit / prices）。浮层头部会自动展示 `model.name`；若后续有多个模型，可在浮层中自行加选择器（当前固定取 `models[0]`）。
+Append one entry (id / name / unit / prices) to the pricing board's `models` array. The overlay header automatically shows `model.name`; with several models later, add a selector in the overlay (it currently always takes `models[0]`).
 
-### 4.3 调整峰谷规则
+### 4.3 Adjust the peak/off-peak rules
 
-- `weekdayPeakWindows`：工作日高峰窗口（`HH:MM`，可多段）；
-- `weekendAllOffPeak`：周末是否统一低谷；
-- `offPeakFactor`：低谷价相对高峰价的比例（浮层脚注按它显示百分比）。
+- `weekdayPeakWindows`: weekday peak windows (`HH:MM`, multiple allowed);
+- `weekendAllOffPeak`: whether weekends are uniformly off-peak;
+- `offPeakFactor`: the off-peak-to-peak ratio (the overlay footnote shows the percentage from it).
 
-### 4.4 新增看板（核心扩展点，两步）
+### 4.4 Add a board (the core extension point, two steps)
 
-1. **Host**：向 `boards[]` 追加一项，例如 `{ id: 'usage', kind: 'usage', title: '用量统计', description: '…', ...自有数据 }`；
-2. **Client**：在渲染器注册表登记 `renderers['usage'] = (board, opts) => React.createElement(UsageView, { board, now: opts.now, key: opts.key, meta: opts.meta })`，并实现 `UsageView` 组件。
+1. **Host**: append one entry to `boards[]`, e.g. `{ id: 'usage', kind: 'usage', title: 'Usage', description: '…', ...own data }`;
+2. **Client**: register a renderer — `renderers['usage'] = (board, opts) => React.createElement(UsageView, { board, now: opts.now, key: opts.key, meta: opts.meta })` — and implement the `UsageView` component.
 
-浮层会按 `kind` 自动分发渲染；未登记渲染器的看板会显示占位提示而不是崩溃。多个看板在浮层内自上而下堆叠。
+The overlay dispatches by `kind` automatically; a board with no registered renderer shows a placeholder instead of crashing. Multiple boards stack top-down inside the overlay.
 
-> 说明：按钮（BoardButton）目前固定展示 pricing 看板摘要。若新看板也需要在按钮上露出摘要，扩展 BoardButton 的逻辑即可（例如按 store 中「当前激活看板」切换）。
+> Note: the button (BoardButton) currently always shows the pricing board's summary. If a new board should also surface a summary on the button, extend BoardButton's logic (for example, switching on the store's "currently active board").
 
-### 4.5 未来扩展方向（示例）
+### 4.5 Future directions (examples)
 
-| 方向 | 做法 |
+| Direction | Approach |
 | --- | --- |
-| 模型可见工具 | Host 用 `harness.registerTool` 注册只读工具（如返回看板摘要），让模型在对话中也能查询定价 |
-| 实时价格 | Host 用 `web` Service 定时 fetch 官方定价页并解析，通过快照 RPC 推给 Client（替换内置常量数据源） |
-| 用量 / 成本看板 | 新看板从 `sessionQuery` / `sessionPersistence` 聚合 token 用量与估算成本，展示在浮层 |
-| 多模型切换 | pricing 看板内加模型下拉，`models` 数组已支持 |
-| 站点通知 / 状态看板 | 复用同一浮层与 `renderers` 机制，新增 `kind` 即可 |
+| Model-visible tool | Register a read-only tool via `harness.registerTool` (e.g. returning a board summary) so the model can query pricing in conversation |
+| Live prices | Use the `web` Service on the Host to fetch and parse the official pricing page on a schedule, pushing it to the Client through the snapshot RPC (replacing the built-in constants) |
+| Usage / cost board | A new board aggregates token usage and estimated cost from `sessionQuery` / `sessionPersistence` and shows it in the overlay |
+| Multi-model switching | Add a model dropdown inside the pricing board; `models` already supports it |
+| Site notice / status board | Reuse the same overlay and `renderers` mechanism with a new `kind` |
 
-## 5. 使用与维护
+## 5. Usage and maintenance
 
-- **首次启动**：`cordis_run`（mode: run）后需在 Web GUI 的 Run 卡片批准（首次授权只针对当前包）。
-- **更新**：`cordis_define` 追加包 → `cordis_run`（mode: update）。
-- **停用**：`cordis_stop`（保留版本，可随时重启）。
-- **删除**：`cordis_undefine`（永久移除，含历史业务视图）。
-- **重启后恢复**：动态插件是进程级的，DSH 重启后需按 `plugin-source.js` 中的源码重新 `cordis_define` + `cordis_run`。
+- **First start**: after `cordis_run` (mode: run), approve in the web GUI's Run card (the first authorization is scoped to the current package).
+- **Update**: `cordis_define` appends a package → `cordis_run` (mode: update).
+- **Disable**: `cordis_stop` (keeps versions; can be restarted any time).
+- **Delete**: `cordis_undefine` (permanently removes, including historical board views).
+- **Recover after restart**: dynamic plugins are process-level; after a DSH restart, re-run `cordis_define` + `cordis_run` from the source in `plugin-source.js`.
 
-## 6. 源码
+## 6. Source
 
-完整可复现源码见同目录 [`plugin-source.js`](./plugin-source.js)（Host half 与 Client half 两个函数体，可直接用于 `cordis_define` 的 `code.host` / `code.client`）。
+The complete reproducible source lives in [`plugin-source.js`](./plugin-source.js) alongside this file (the Host half and Client half function bodies, ready for `cordis_define`'s `code.host` / `code.client`).
 
-## 7. 版本记录与验证
+## 7. Version history and verification
 
-| 包 | 说明 |
+| Package | Notes |
 | --- | --- |
-| `pkg-1` | 初版（Client 引用未定义的 CSS 常量，未运行） |
-| `pkg-2` | 修复 CSS 常量；经真实页面验证：按钮与浮层正常渲染（当前阶段、价格、倒计时、全部时段、周末规则） |
-| `pkg-3` | 修复午间低谷时段标签（`12:00 – 24:00` → `12:00 – 14:00`）与价格尾零（`13.50` → `13.5`）；经真实页面复验通过 |
-| `pkg-4` | 原 `board-1` 被误删后按 `plugin-source.js` 重新创建（新插件 `board-2`），源码与 `pkg-3` 一致 |
+| `pkg-1` | Initial version (the Client referenced an undefined CSS constant; never ran) |
+| `pkg-2` | Fixed the CSS constant; verified on a real page: button and overlay render correctly (current phase, price, countdown, all windows, weekend rule) |
+| `pkg-3` | Fixed the midday off-peak label (`12:00 – 24:00` → `12:00 – 14:00`) and price trailing zeros (`13.50` → `13.5`); re-verified on a real page |
+| `pkg-4` | Re-created from `plugin-source.js` after `board-1` was accidentally deleted (new plugin `board-2`); source identical to `pkg-3` |
 
-验证方式：保持一个浏览器页面连接 DSH Web，`cordis_run`（run/update）将 Client 半投递给已连接的页面（新打开的页面不会重放已激活的动态插件），再对页面截图/读取浮层文本确认。
+Verification method: keep one browser page connected to the DSH web app, `cordis_run` (run/update) to deliver the Client half to the connected page (a newly opened page does not replay activated dynamic plugins), then screenshot the page / read the overlay text to confirm.
