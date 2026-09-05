@@ -149,3 +149,12 @@ Docs accompany every code change: update affected README and JSDoc contracts tog
 ## Vendoring policy
 
 `vendor/` packages are pinned source copies (manifest with upstream SHAs in [vendor/README.md](vendor/README.md)). Update via the sync procedure there; re-apply or retire the logged local modifications; rerun `pnpm run test && pnpm run build`.
+
+## Plugin installs
+
+When a task asks to install a plugin, skill, or extension published in an external repository, vendor its source into this repository (for example `plugins/<name>/`) and point the consuming profile at the in-repo path — every installed artifact must live in a repository the operator can commit and push to. Never leave an install rooted in a clone of a third-party repository: the operator has no push rights there, so the deployed code ends up unversioned and unpushable. Mechanics:
+
+- Profile dependencies reference the vendored copy: `dsh plugin --profile <name> add "file:<repo-path>/<plugin-name>"`.
+- pnpm materializes `file:` dependencies as copies, not links — re-run the add command after every edit to the vendored source.
+- The repo-wide `lib/` ignore excludes built outputs and also excludes vendored JavaScript plugin sources — `git add -f plugins/<name>/lib` after vendoring, then confirm the pushed tree contains them (`git ls-tree origin/<branch> plugins/<name>/`).
+- Verify composition without serving: `dsh --profile <name> --dump-config`.
