@@ -1,0 +1,6 @@
+# dsh-git-nexus bundle patch: mounts the dual-face plugin row.
+# Host half (lib/index.js) registers the `gitNexus` Remote service; the browser
+# half (lib/client.js, declared via dsh.client) renders the management panel.
+- insert:
+    - id: git-nexus
+      name: dsh-git-nexus
