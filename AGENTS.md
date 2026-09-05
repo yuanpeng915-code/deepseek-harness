@@ -158,3 +158,4 @@ When a task asks to install a plugin, skill, or extension published in an extern
 - pnpm materializes `file:` dependencies as copies, not links — re-run the add command after every edit to the vendored source.
 - The repo-wide `lib/` ignore excludes built outputs and also excludes vendored JavaScript plugin sources — `git add -f plugins/<name>/lib` after vendoring, then confirm the pushed tree contains them (`git ls-tree origin/<branch> plugins/<name>/`).
 - Verify composition without serving: `dsh --profile <name> --dump-config`.
+- Fresh-clone bootstrap: `pnpm install && pnpm run setup:plugins` installs every vendored plugin into a local profile; project-scoped skills under `.dsh/skills/` are discovered with no install step.
